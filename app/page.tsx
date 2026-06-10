@@ -1,65 +1,107 @@
-import Image from "next/image";
+"use client";
+import { useState } from "react";
+
+const GRADES = ["Grade 1 (Specialty)", "Grade 2 (Premium)", "Grade 3 (Commercial)", "Peaberry", "Robusta"];
+const STATUSES = ["Processing", "Shipped", "Delivered"];
+
+const INIT_ORDERS = [
+  { id: 1, date: "2026-01-12", buyer: "Ritual Coffee Roasters", grade: "Grade 1 (Specialty)", kgs: 2000, priceUSD: 9.5, status: "Delivered" },
+  { id: 2, date: "2026-02-20", buyer: "OR (PTT)", grade: "Grade 1 (Specialty)", kgs: 5000, priceUSD: 8.8, status: "Delivered" },
+  { id: 3, date: "2026-05-18", buyer: "OR (PTT)", grade: "Grade 1 (Specialty)", kgs: 4000, priceUSD: 9.0, status: "Shipped" },
+  { id: 4, date: "2026-06-08", buyer: "Ritual Coffee Roasters", grade: "Grade 1 (Specialty)", kgs: 1200, priceUSD: 11.0, status: "Processing" },
+];
 
 export default function Home() {
+  const [orders, setOrders] = useState(INIT_ORDERS);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ date: "", buyer: "", grade: GRADES[0], kgs: "", priceUSD: "", status: "Processing" });
+
+  const totalRevenue = orders.reduce((s, o) => s + o.kgs * o.priceUSD, 0);
+  const totalKgs = orders.reduce((s, o) => s + o.kgs, 0);
+
+  function saveOrder() {
+    if (!form.date || !form.buyer || !form.kgs || !form.priceUSD) return;
+    setOrders([...orders, { ...form, id: orders.length + 1, kgs: parseFloat(form.kgs), priceUSD: parseFloat(form.priceUSD) }]);
+    setShowForm(false);
+    setForm({ date: "", buyer: "", grade: GRADES[0], kgs: "", priceUSD: "", status: "Processing" });
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main style={{ minHeight: "100vh", background: "#f4f7f2", fontFamily: "sans-serif", padding: 24 }}>
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <div>
+            <h1 style={{ color: "#2d7a3a", fontSize: 24, margin: 0 }}>☕ Somxay Coffee</h1>
+            <p style={{ color: "#6b8f5e", margin: 0, fontSize: 13 }}>Green Bean Sales Tracker</p>
+          </div>
+          <button onClick={() => setShowForm(true)} style={{ background: "#2d7a3a", color: "#fff", border: "none", padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontSize: 14 }}>+ บันทึกออเดอร์</button>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+          {[
+            { label: "รายได้รวม (USD)", value: "$" + totalRevenue.toLocaleString() },
+            { label: "ปริมาณขาย", value: totalKgs.toLocaleString() + " kg" },
+            { label: "ออเดอร์ทงหมด", value: orders.length },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ background: "#fff", borderRadius: 12, padding: 20, border: "1px solid #d4e4d0" }}>
+              <div style={{ fontSize: 12, color: "#6b8f5e", marginBottom: 6 }}>{label}</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: "#2d7a3a" }}>{value}</div>
+            </div>
+          ))}
         </div>
-      </main>
-    </div>
+
+        <div style={{ background: "#fff", borderRadius: 12, padding: 20, border: "1px solid #d4e4d0" }}>
+          <h2 style={{ color: "#2d7a3a", fontSize: 16, marginTop: 0 }}>คสั่งซื้อทั้งหมด</h2>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ borderBottom: "2px solid #d4e4d0" }}>
+                {["วันที่", "ลกค้า", "Grade", "ปริมาณ", "ราคา/kg", "มูลค่า", "สถานะ"].map(h => (
+                  <th key={h} style={{ textAlign: "left", padding: "8px 10px", color: "#6b8f5e" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {orders.map(o => (
+                <tr key={o.id} style={{ borderBottom: "1px solid #f0f4ef" }}>
+                  <td style={{ padding: "10px" }}>{o.date}</td>
+                  <td style={{ padding: "10px" }}>{o.buyer}</td>
+                  <td style={{ padding: "10px" }}>{o.grade}</td>
+                  <td style={{ padding: "10px" }}>{o.kgs.toLocaleString()} kg</td>
+                  <td style={{ padding: "10px" }}>${o.priceUSD}</td>
+                  <td style={{ padding: "10px", color: "#b8860b", fontWeight: 700 }}>${(o.kgs * o.priceUSD).toLocaleString()}</td>
+                  <td style={{ padding: "10px" }}>
+                    <span style={{ background: o.status === "Delivered" ? "#e8f5e9" : o.status === "Shipped" ? "#fff8e1" : "#e3f2fd", color: o.status === "Delivered" ? "#2d7a3a" : o.status === "Shipped" ? "#b8860b" : "#1565c0", borderRadius: 6, padding: "3px 10px", fontSize: 12 }}>{o.status}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {showForm && (
+          <div style={{ position: "fixed", inset: 0, background: "#00000066", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ background: "#fff", borderRadius: 16, padding: 28, width: 440 }}>
+              <h2 style={{ color: "#2d7a3a", marginTop: 0 }}>บันทึกออเดอร์ใหม่</h2>
+              {[["วันที่", "date", "date"], ["ลูกค้า", "buyer", "text"], ["ปริมาณ (kg)", "kgs", "number"], ["ราคา USD/kg", "priceUSD", "number"]].map(([label, key, type]) => (
+                <div key={key} style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, color: "#6b8f5e", marginBottom: 4 }}>{label}</div>
+                  <input type={type} value={(form as any)[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #d4e4d0", fontSize: 14, boxSizing: "border-box" as any }} />
+                </div>
+              ))}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 12, color: "#6b8f5e", marginBottom: 4 }}>Grade</div>
+                <select value={form.grade} onChange={e => setForm({ ...form, grade: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #d4e4d0", fontSize: 14 }}>
+                  {GRADES.map(g => <option key={g}>{g}</option>)}
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
+                <button onClick={() => setShowForm(false)} style={{ padding: "9px 20px", borderRadius: 8, border: "1px solid #d4e4d0", background: "#f4f7f2", cursor: "pointer" }}>ยกเลิก</button>
+                <button onClick={saveOrder} style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: "#2d7a3a", color: "#fff", cursor: "pointer" }}>บันทึก</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
