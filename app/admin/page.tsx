@@ -7,11 +7,10 @@ function formatUSD(n: number) {
 export default async function AdminHome() {
   const supabase = await createClient()
 
-  const { data: orders } = await supabase
+  const { data: allOrders } = await supabase
     .from('orders')
     .select('id, order_date, status, total_usd, customers(company_name)')
     .order('order_date', { ascending: false })
-    .limit(10)
 
   const { count: customerCount } = await supabase
     .from('customers')
@@ -21,9 +20,10 @@ export default async function AdminHome() {
     .from('order_items')
     .select('quantity_kg')
 
-  const totalRevenue = (orders ?? []).reduce((sum, o) => sum + (o.total_usd ?? 0), 0)
+  const orders = (allOrders ?? []).slice(0, 10)
+  const totalOrders = allOrders?.length ?? 0
+  const totalRevenue = (allOrders ?? []).reduce((sum, o) => sum + (o.total_usd ?? 0), 0)
   const totalVolume = (orderItems ?? []).reduce((sum, i) => sum + (i.quantity_kg ?? 0), 0)
-  const totalOrders = orders?.length ?? 0
 
   const stats = [
     { label: 'Total Revenue (USD)', value: formatUSD(totalRevenue) },
@@ -68,7 +68,7 @@ export default async function AdminHome() {
               </tr>
             </thead>
             <tbody>
-              {(orders ?? []).map((o) => {
+              {orders.map((o) => {
                 const customer = Array.isArray(o.customers) ? o.customers[0] : o.customers
                 return (
                   <tr key={o.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
