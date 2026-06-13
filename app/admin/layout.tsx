@@ -2,40 +2,40 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
-const MENUS: Record<string, { label: string; href: string }[]> = {
+const MENUS: Record<string, { label: string; href: string; icon: string }[]> = {
   admin: [
-    { label: 'Executive Dashboard', href: '/admin' },
-    { label: 'Customer Management', href: '/admin/customers' },
-    { label: 'Product & Inventory', href: '/admin/products' },
-    { label: 'Orders', href: '/admin/orders' },
-    { label: 'Quotations', href: '/admin/quotations' },
-    { label: 'Contracts', href: '/admin/contracts' },
-    { label: 'Payments', href: '/admin/payments' },
-    { label: 'Shipments', href: '/admin/shipments' },
-    { label: 'Samples', href: '/admin/samples' },
-    { label: 'Documents', href: '/admin/documents' },
-    { label: 'Reports', href: '/admin/reports' },
-    { label: 'User Management', href: '/admin/users' },
+    { label: 'Executive Dashboard', href: '/admin', icon: '📊' },
+    { label: 'Customer Management', href: '/admin/customers', icon: '👥' },
+    { label: 'Product & Inventory', href: '/admin/products', icon: '📦' },
+    { label: 'Orders', href: '/admin/orders', icon: '🛒' },
+    { label: 'Quotations', href: '/admin/quotations', icon: '📝' },
+    { label: 'Contracts', href: '/admin/contracts', icon: '📄' },
+    { label: 'Payments', href: '/admin/payments', icon: '💳' },
+    { label: 'Shipments', href: '/admin/shipments', icon: '🚚' },
+    { label: 'Samples', href: '/admin/samples', icon: '🧪' },
+    { label: 'Documents', href: '/admin/documents', icon: '📁' },
+    { label: 'Reports', href: '/admin/reports', icon: '📈' },
+    { label: 'User Management', href: '/admin/users', icon: '👤' },
   ],
   manager: [
-    { label: 'Executive Dashboard', href: '/admin' },
-    { label: 'Customer Management', href: '/admin/customers' },
-    { label: 'Product & Inventory', href: '/admin/products' },
-    { label: 'Orders', href: '/admin/orders' },
-    { label: 'Quotations', href: '/admin/quotations' },
-    { label: 'Contracts', href: '/admin/contracts' },
-    { label: 'Payments', href: '/admin/payments' },
-    { label: 'Shipments', href: '/admin/shipments' },
-    { label: 'Samples', href: '/admin/samples' },
-    { label: 'Documents', href: '/admin/documents' },
-    { label: 'Reports', href: '/admin/reports' },
+    { label: 'Executive Dashboard', href: '/admin', icon: '📊' },
+    { label: 'Customer Management', href: '/admin/customers', icon: '👥' },
+    { label: 'Product & Inventory', href: '/admin/products', icon: '📦' },
+    { label: 'Orders', href: '/admin/orders', icon: '🛒' },
+    { label: 'Quotations', href: '/admin/quotations', icon: '📝' },
+    { label: 'Contracts', href: '/admin/contracts', icon: '📄' },
+    { label: 'Payments', href: '/admin/payments', icon: '💳' },
+    { label: 'Shipments', href: '/admin/shipments', icon: '🚚' },
+    { label: 'Samples', href: '/admin/samples', icon: '🧪' },
+    { label: 'Documents', href: '/admin/documents', icon: '📁' },
+    { label: 'Reports', href: '/admin/reports', icon: '📈' },
   ],
   sales: [
-    { label: 'Customers', href: '/admin/customers' },
-    { label: 'Quotations', href: '/admin/quotations' },
-    { label: 'Orders', href: '/admin/orders' },
-    { label: 'Samples', href: '/admin/samples' },
-    { label: 'Follow-up Tasks', href: '/admin/tasks' },
+    { label: 'Customers', href: '/admin/customers', icon: '👥' },
+    { label: 'Quotations', href: '/admin/quotations', icon: '📝' },
+    { label: 'Orders', href: '/admin/orders', icon: '🛒' },
+    { label: 'Samples', href: '/admin/samples', icon: '🧪' },
+    { label: 'Follow-up Tasks', href: '/admin/tasks', icon: '✅' },
   ],
 }
 
@@ -57,20 +57,34 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-      <aside style={{ width: 240, background: '#1f3d2e', color: '#fff', padding: '24px 20px', flexShrink: 0 }}>
-        <h2 style={{ color: '#a8e063', marginBottom: 4, fontSize: 20 }}>☕ Somxay Coffee</h2>
-        <p style={{ fontSize: 12, opacity: 0.7, marginBottom: 24 }}>
+      <aside style={{ width: 250, background: '#1f3d2e', color: '#fff', padding: '28px 18px', flexShrink: 0 }}>
+        <h2 style={{ color: '#a8e063', marginBottom: 2, fontSize: 20 }}>☕ Somxay Coffee</h2>
+        <p style={{ fontSize: 12, opacity: 0.65, marginBottom: 28 }}>
           {role.toUpperCase()}{profile?.full_name ? ` — ${profile.full_name}` : ''}
         </p>
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {menu.map((item) => (
-            <Link key={item.href} href={item.href} style={{ color: '#fff', textDecoration: 'none', padding: '8px 10px', borderRadius: 6, fontSize: 14 }}>
-              {item.label}
+            <Link
+              key={item.href}
+              href={item.href}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                color: '#fff',
+                textDecoration: 'none',
+                padding: '10px 12px',
+                borderRadius: 8,
+                fontSize: 14,
+              }}
+            >
+              <span style={{ fontSize: 16 }}>{item.icon}</span>
+              <span>{item.label}</span>
             </Link>
           ))}
         </nav>
       </aside>
-      <main style={{ flex: 1, padding: 32, background: '#f5f7f2' }}>{children}</main>
+      <main style={{ flex: 1, padding: 36, background: '#f5f7f2' }}>{children}</main>
     </div>
   )
 }
