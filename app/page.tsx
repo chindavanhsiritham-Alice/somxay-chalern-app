@@ -85,6 +85,7 @@ export default function Home() {
               {[["วันที่", "date", "date"], ["ลูกค้า", "buyer", "text"], ["ปริมาณ (kg)", "kgs", "number"], ["ราคา USD/kg", "priceUSD", "number"]].map(([label, key, type]) => (
                 <div key={key} style={{ marginBottom: 12 }}>
                   <div style={{ fontSize: 12, color: "#6b8f5e", marginBottom: 4 }}>{label}</div>
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   <input type={type} value={(form as any)[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #d4e4d0", fontSize: 14, boxSizing: "border-box" as any }} />
                 </div>
               ))}
