@@ -13,6 +13,7 @@ export interface Product {
   moisture?: string | null
   defect?: string | null
   packing?: string | null
+  stock_kg?: number | null
   public_price_usd?: number | null
   public_price_thb?: number | null
   public_price_lak?: number | null
@@ -30,6 +31,7 @@ const FIELDS: { key: keyof Product; label: string; type: FieldType }[] = [
   { key: 'moisture', label: 'Moisture', type: 'text' },
   { key: 'defect', label: 'Defect', type: 'text' },
   { key: 'packing', label: 'Packing', type: 'text' },
+  { key: 'stock_kg', label: 'Stock KG', type: 'number' },
   { key: 'public_price_usd', label: 'USD/kg', type: 'number' },
   { key: 'public_price_thb', label: 'THB/kg', type: 'number' },
   { key: 'public_price_lak', label: 'LAK/kg', type: 'number' },
