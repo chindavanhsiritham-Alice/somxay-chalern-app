@@ -2,7 +2,6 @@
 import { useState } from "react";
 
 const GRADES = ["Grade 1 (Specialty)", "Grade 2 (Premium)", "Grade 3 (Commercial)", "Peaberry", "Robusta"];
-const STATUSES = ["Processing", "Shipped", "Delivered"];
 
 const INIT_ORDERS = [
   { id: 1, date: "2026-01-12", buyer: "Ritual Coffee Roasters", grade: "Grade 1 (Specialty)", kgs: 2000, priceUSD: 9.5, status: "Delivered" },
