@@ -1,8 +1,13 @@
-export default function Page() {
-  return (
-    <div>
-      <h1 style={{ color: '#2d7a3a' }}>Product & Inventory</h1>
-      <p style={{ color: '#999' }}>Coming soon.</p>
-    </div>
-  )
+import { createClient } from '@/lib/supabase/server'
+import ProductsManager, { type Product } from './ProductsManager'
+
+export default async function AdminProducts() {
+  const supabase = await createClient()
+
+  const { data: products } = await supabase
+    .from('products_catalog')
+    .select('*')
+    .order('name')
+
+  return <ProductsManager initialProducts={(products as Product[]) ?? []} />
 }
