@@ -6,6 +6,7 @@ const MENUS: Record<string, { label: string; href: string; icon: string }[]> = {
   admin: [
     { label: 'Executive Dashboard', href: '/admin', icon: '📊' },
     { label: 'Customer Management', href: '/admin/customers', icon: '👥' },
+    { label: 'Customer Approvals', href: '/admin/customer-approvals', icon: '✅' },
     { label: 'Product & Inventory', href: '/admin/products', icon: '📦' },
     { label: 'Exchange Rates', href: '/admin/exchange-rates', icon: '💱' },
     { label: 'Orders', href: '/admin/orders', icon: '🛒' },
@@ -21,6 +22,7 @@ const MENUS: Record<string, { label: string; href: string; icon: string }[]> = {
   manager: [
     { label: 'Executive Dashboard', href: '/admin', icon: '📊' },
     { label: 'Customer Management', href: '/admin/customers', icon: '👥' },
+    { label: 'Customer Approvals', href: '/admin/customer-approvals', icon: '✅' },
     { label: 'Product & Inventory', href: '/admin/products', icon: '📦' },
     { label: 'Exchange Rates', href: '/admin/exchange-rates', icon: '💱' },
     { label: 'Orders', href: '/admin/orders', icon: '🛒' },
