@@ -12,13 +12,54 @@ export const CUSTOMER_TYPES = [
 ] as const
 export type CustomerType = (typeof CUSTOMER_TYPES)[number]
 
-export const CUSTOMER_STATUSES = ['pending', 'approved', 'rejected', 'suspended'] as const
+export const CUSTOMER_STATUSES = ['pending', 'approved', 'active', 'suspended', 'blacklisted'] as const
 export type CustomerStatus = (typeof CUSTOMER_STATUSES)[number]
 
-export const CUSTOMER_TIERS = ['retail', 'wholesale', 'strategic'] as const
+// Statuses allowed to place orders.
+export const ORDER_CAPABLE_STATUSES = ['approved', 'active'] as const
+export function canOrder(status: string | null | undefined): boolean {
+  return status != null && (ORDER_CAPABLE_STATUSES as readonly string[]).includes(status)
+}
+
+export const CUSTOMER_TIERS = ['retail', 'wholesale', 'distributor', 'vip'] as const
 export type CustomerTier = (typeof CUSTOMER_TIERS)[number]
 
-export const PAYMENT_TERM_DAYS = [0, 3, 5] as const
+export const TIER_LABELS: Record<string, string> = {
+  retail: 'Retail',
+  wholesale: 'Wholesale',
+  distributor: 'Distributor',
+  vip: 'VIP',
+}
+
+// Payment terms. Default is prepaid; credit terms are admin-assigned only.
+export const PAYMENT_TERMS = [
+  { value: 'prepaid', label: 'Prepaid' },
+  { value: 'credit_3', label: 'Credit 3 Days' },
+  { value: 'credit_5', label: 'Credit 5 Days' },
+] as const
+export const PAYMENT_TERM_LABELS: Record<string, string> = {
+  prepaid: 'Prepaid',
+  credit_3: 'Credit 3 Days',
+  credit_5: 'Credit 5 Days',
+}
+// Numeric credit days kept in sync for downstream order logic.
+export const PAYMENT_TERM_TO_DAYS: Record<string, number> = {
+  prepaid: 0,
+  credit_3: 3,
+  credit_5: 5,
+}
+
+// Optional customer documents.
+export const DOCUMENT_TYPES = [
+  { value: 'company_registration', label: 'Company Registration' },
+  { value: 'tax_certificate', label: 'Tax Certificate' },
+  { value: 'id_passport', label: 'ID Card / Passport' },
+] as const
+export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  company_registration: 'Company Registration',
+  tax_certificate: 'Tax Certificate',
+  id_passport: 'ID Card / Passport',
+}
 
 // Preset package sizes (kg) plus a custom option handled in the UI.
 export const PACKAGE_OPTIONS = [10, 20, 25, 30, 60] as const
@@ -57,8 +98,10 @@ export const ORDER_STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
 export const STATUS_BADGE_COLORS: Record<string, { bg: string; fg: string }> = {
   pending: { bg: '#fdeec0', fg: '#8a6d1a' },
   approved: { bg: '#d4f0d4', fg: '#256029' },
-  rejected: { bg: '#f5d6d6', fg: '#9a2a2a' },
+  active: { bg: '#c7ecc7', fg: '#1d5024' },
   suspended: { bg: '#e2e2e2', fg: '#666' },
+  blacklisted: { bg: '#3a3a3a', fg: '#fff' },
+  rejected: { bg: '#f5d6d6', fg: '#9a2a2a' },
 }
 
 export function money(prefix: string, value: number | null | undefined): string {

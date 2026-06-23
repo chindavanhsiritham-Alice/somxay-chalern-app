@@ -17,6 +17,16 @@ export interface Product {
   public_price_usd?: number | null
   public_price_thb?: number | null
   public_price_lak?: number | null
+  // Tier prices (retail uses public_price_*; others fall back to it when null).
+  price_wholesale_usd?: number | null
+  price_wholesale_thb?: number | null
+  price_wholesale_lak?: number | null
+  price_distributor_usd?: number | null
+  price_distributor_thb?: number | null
+  price_distributor_lak?: number | null
+  price_vip_usd?: number | null
+  price_vip_thb?: number | null
+  price_vip_lak?: number | null
   // Admin-only internal fields — never exposed in the customer portal.
   internal_cost_usd?: number | null
   internal_cost_thb?: number | null
@@ -46,9 +56,21 @@ const CATALOG_FIELDS: FieldDef[] = [
 ]
 
 const PUBLIC_PRICE_FIELDS: FieldDef[] = [
-  { key: 'public_price_usd', label: 'USD/kg', type: 'number' },
-  { key: 'public_price_thb', label: 'THB/kg', type: 'number' },
-  { key: 'public_price_lak', label: 'LAK/kg', type: 'number' },
+  { key: 'public_price_usd', label: 'Retail USD/kg', type: 'number' },
+  { key: 'public_price_thb', label: 'Retail THB/kg', type: 'number' },
+  { key: 'public_price_lak', label: 'Retail LAK/kg', type: 'number' },
+]
+
+const TIER_PRICE_FIELDS: FieldDef[] = [
+  { key: 'price_wholesale_usd', label: 'Wholesale USD/kg', type: 'number' },
+  { key: 'price_wholesale_thb', label: 'Wholesale THB/kg', type: 'number' },
+  { key: 'price_wholesale_lak', label: 'Wholesale LAK/kg', type: 'number' },
+  { key: 'price_distributor_usd', label: 'Distributor USD/kg', type: 'number' },
+  { key: 'price_distributor_thb', label: 'Distributor THB/kg', type: 'number' },
+  { key: 'price_distributor_lak', label: 'Distributor LAK/kg', type: 'number' },
+  { key: 'price_vip_usd', label: 'VIP USD/kg', type: 'number' },
+  { key: 'price_vip_thb', label: 'VIP THB/kg', type: 'number' },
+  { key: 'price_vip_lak', label: 'VIP LAK/kg', type: 'number' },
 ]
 
 const INTERNAL_FIELDS: FieldDef[] = [
@@ -59,7 +81,7 @@ const INTERNAL_FIELDS: FieldDef[] = [
   { key: 'margin_percent', label: 'Margin %', type: 'number' },
 ]
 
-const ALL_EDIT_FIELDS = [...CATALOG_FIELDS, ...PUBLIC_PRICE_FIELDS, ...INTERNAL_FIELDS]
+const ALL_EDIT_FIELDS = [...CATALOG_FIELDS, ...PUBLIC_PRICE_FIELDS, ...TIER_PRICE_FIELDS, ...INTERNAL_FIELDS]
 
 function num(value: unknown): number | null {
   if (value == null || value === '') return null
@@ -530,8 +552,11 @@ function ProductEditor({
       <p style={sectionTitle}>Catalog</p>
       <div style={groupStyle}>{CATALOG_FIELDS.map(field)}</div>
 
-      <p style={sectionTitle}>Public Prices (per kg)</p>
+      <p style={sectionTitle}>Retail Prices (per kg)</p>
       <div style={groupStyle}>{PUBLIC_PRICE_FIELDS.map(field)}</div>
+
+      <p style={sectionTitle}>Tier Prices — leave blank to use retail price</p>
+      <div style={groupStyle}>{TIER_PRICE_FIELDS.map(field)}</div>
 
       <p style={sectionTitle}>Internal — admin only (not shown to customers)</p>
       <div style={groupStyle}>{INTERNAL_FIELDS.map(field)}</div>

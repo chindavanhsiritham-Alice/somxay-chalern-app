@@ -42,11 +42,12 @@ export default async function PortalLayout({ children }: { children: React.React
             to start ordering.
           </Banner>
         )}
-        {status && status !== 'approved' && (
+        {status && status !== 'approved' && status !== 'active' && (
           <Banner color={STATUS_BADGE_COLORS[status] ?? STATUS_BADGE_COLORS.pending}>
             {status === 'pending' && 'Your account is pending approval. You can browse products, but ordering unlocks once an admin approves you.'}
-            {status === 'rejected' && 'Your account application was not approved. Please contact our sales team.'}
             {status === 'suspended' && 'Your account is currently suspended. Please contact our sales team.'}
+            {status === 'blacklisted' && 'Your account has been blocked. Please contact our sales team.'}
+            {status === 'rejected' && 'Your account application was not approved. Please contact our sales team.'}
           </Banner>
         )}
         {children}
