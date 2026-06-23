@@ -6,9 +6,19 @@ import {
   CUSTOMER_STATUSES,
   CUSTOMER_TIERS,
   CUSTOMER_TYPES,
-  PAYMENT_TERM_DAYS,
+  TIER_LABELS,
+  PAYMENT_TERMS,
+  PAYMENT_TERM_LABELS,
+  PAYMENT_TERM_TO_DAYS,
+  DOCUMENT_TYPE_LABELS,
   STATUS_BADGE_COLORS,
 } from '@/lib/portal'
+
+export interface CustomerDoc {
+  id: string
+  doc_type: string
+  url: string | null
+}
 
 export interface AdminCustomer {
   id: string
@@ -26,6 +36,7 @@ export interface AdminCustomer {
   instagram: string | null
   status: string | null
   tier: string | null
+  payment_terms: string | null
   credit_enabled: boolean | null
   payment_term_days: number | null
   created_at: string | null
@@ -33,7 +44,21 @@ export interface AdminCustomer {
 
 const STATUS_FILTERS = ['all', ...CUSTOMER_STATUSES] as const
 
-export default function CustomerApprovals({ initial }: { initial: AdminCustomer[] }) {
+// Quick status actions available from each card.
+const QUICK_ACTIONS: { status: string; label: string; color: string }[] = [
+  { status: 'approved', label: 'Approve', color: '#256029' },
+  { status: 'active', label: 'Activate', color: '#1d5024' },
+  { status: 'suspended', label: 'Suspend', color: '#8a6d1a' },
+  { status: 'blacklisted', label: 'Blacklist', color: '#3a3a3a' },
+]
+
+export default function CustomerApprovals({
+  initial,
+  docsByCustomer,
+}: {
+  initial: AdminCustomer[]
+  docsByCustomer: Record<string, CustomerDoc[]>
+}) {
   const supabase = createClient()
   const [customers, setCustomers] = useState<AdminCustomer[]>(initial)
   const [filter, setFilter] = useState<string>('pending')
@@ -68,6 +93,10 @@ export default function CustomerApprovals({ initial }: { initial: AdminCustomer[
   async function saveEdit() {
     if (!editing) return
     const { id, ...rest } = editing
+    // Keep the derived numeric/credit columns in sync with payment_terms.
+    const terms = rest.payment_terms ?? 'prepaid'
+    rest.payment_term_days = PAYMENT_TERM_TO_DAYS[terms] ?? 0
+    rest.credit_enabled = terms !== 'prepaid'
     const ok = await patch(id, rest)
     if (ok) setEditing(null)
   }
@@ -111,6 +140,8 @@ export default function CustomerApprovals({ initial }: { initial: AdminCustomer[
             {filtered.map((c) => {
               const sc = STATUS_BADGE_COLORS[c.status ?? 'pending'] ?? STATUS_BADGE_COLORS.pending
               const busy = busyId === c.id
+              const docs = docsByCustomer[c.id] ?? []
+              const terms = c.payment_terms ?? (c.credit_enabled ? `credit_${c.payment_term_days}` : 'prepaid')
               return (
                 <div key={c.id} style={{ border: '1px solid #eee', borderRadius: 10, padding: 14 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
@@ -125,8 +156,19 @@ export default function CustomerApprovals({ initial }: { initial: AdminCustomer[
                       <div style={{ fontSize: 12, color: '#9aa', marginTop: 2 }}>
                         {c.company_name ? `${c.company_name} · ` : ''}
                         {c.expected_monthly_volume ? `~${c.expected_monthly_volume}/mo · ` : ''}
-                        Tier: {c.tier} · {c.credit_enabled ? `Credit ${c.payment_term_days}d` : 'Prepaid'}
+                        Tier: {TIER_LABELS[c.tier ?? 'retail'] ?? c.tier} · {PAYMENT_TERM_LABELS[terms] ?? terms}
                       </div>
+                      {docs.length > 0 && (
+                        <div style={{ fontSize: 12, marginTop: 6, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                          {docs.map((d) =>
+                            d.url ? (
+                              <a key={d.id} href={d.url} target="_blank" rel="noreferrer" style={{ color: '#2d7a3a' }}>
+                                📎 {DOCUMENT_TYPE_LABELS[d.doc_type] ?? d.doc_type}
+                              </a>
+                            ) : null
+                          )}
+                        </div>
+                      )}
                     </div>
                     <span style={{ background: sc.bg, color: sc.fg, padding: '3px 12px', borderRadius: 999, fontSize: 12, height: 'fit-content' }}>
                       {c.status}
@@ -134,15 +176,9 @@ export default function CustomerApprovals({ initial }: { initial: AdminCustomer[
                   </div>
 
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-                    {c.status !== 'approved' && (
-                      <Action label="Approve" color="#256029" disabled={busy} onClick={() => patch(c.id, { status: 'approved' })} />
-                    )}
-                    {c.status !== 'rejected' && (
-                      <Action label="Reject" color="#9a2a2a" disabled={busy} onClick={() => patch(c.id, { status: 'rejected' })} />
-                    )}
-                    {c.status !== 'suspended' && (
-                      <Action label="Suspend" color="#8a6d1a" disabled={busy} onClick={() => patch(c.id, { status: 'suspended' })} />
-                    )}
+                    {QUICK_ACTIONS.filter((a) => a.status !== (c.status ?? 'pending')).map((a) => (
+                      <Action key={a.status} label={a.label} color={a.color} disabled={busy} onClick={() => patch(c.id, { status: a.status })} />
+                    ))}
                     <Action label="Edit" color="#2d7a3a" disabled={busy} onClick={() => setEditing(c)} />
                   </div>
                 </div>
@@ -155,6 +191,7 @@ export default function CustomerApprovals({ initial }: { initial: AdminCustomer[
       {editing && (
         <EditModal
           customer={editing}
+          docs={docsByCustomer[editing.id] ?? []}
           onChange={setEditing}
           onSave={saveEdit}
           onClose={() => setEditing(null)}
@@ -181,12 +218,14 @@ const modalInput: React.CSSProperties = { width: '100%', padding: 9, borderRadiu
 
 function EditModal({
   customer,
+  docs,
   onChange,
   onSave,
   onClose,
   busy,
 }: {
   customer: AdminCustomer
+  docs: CustomerDoc[]
   onChange: (c: AdminCustomer) => void
   onSave: () => void
   onClose: () => void
@@ -230,7 +269,14 @@ function EditModal({
           <Field label="Tier">
             <select value={customer.tier ?? 'retail'} onChange={(e) => set('tier', e.target.value)} style={modalInput}>
               {CUSTOMER_TIERS.map((t) => (
-                <option key={t} value={t}>{t}</option>
+                <option key={t} value={t}>{TIER_LABELS[t]}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Payment terms">
+            <select value={customer.payment_terms ?? 'prepaid'} onChange={(e) => set('payment_terms', e.target.value)} style={modalInput}>
+              {PAYMENT_TERMS.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>
           </Field>
@@ -242,33 +288,27 @@ function EditModal({
               ))}
             </select>
           </Field>
-          <Field label="Credit enabled">
-            <select
-              value={customer.credit_enabled ? 'yes' : 'no'}
-              onChange={(e) => set('credit_enabled', e.target.value === 'yes')}
-              style={modalInput}
-            >
-              <option value="no">No (prepaid)</option>
-              <option value="yes">Yes</option>
-            </select>
-          </Field>
-          <Field label="Payment term (days)">
-            <select
-              value={String(customer.payment_term_days ?? 0)}
-              onChange={(e) => set('payment_term_days', Number(e.target.value))}
-              style={modalInput}
-            >
-              {PAYMENT_TERM_DAYS.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-          </Field>
           {textFields.map((f) => (
             <Field key={f.key} label={f.label}>
               <input value={(customer[f.key] as string) ?? ''} onChange={(e) => set(f.key, e.target.value)} style={modalInput} />
             </Field>
           ))}
         </div>
+
+        {docs.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontSize: 12, color: '#6b8f5e', marginBottom: 6 }}>Documents</div>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              {docs.map((d) =>
+                d.url ? (
+                  <a key={d.id} href={d.url} target="_blank" rel="noreferrer" style={{ color: '#2d7a3a', fontSize: 13 }}>
+                    📎 {DOCUMENT_TYPE_LABELS[d.doc_type] ?? d.doc_type}
+                  </a>
+                ) : null
+              )}
+            </div>
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
           <button onClick={onClose} style={{ background: '#eee', color: '#555', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 14, cursor: 'pointer' }}>

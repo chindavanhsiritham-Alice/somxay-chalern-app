@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { CUSTOMER_TYPES, STATUS_BADGE_COLORS } from '@/lib/portal'
+import { CUSTOMER_TYPES, STATUS_BADGE_COLORS, TIER_LABELS, PAYMENT_TERM_LABELS } from '@/lib/portal'
 
 export interface CustomerProfile {
   id?: string
@@ -21,6 +21,7 @@ export interface CustomerProfile {
   expected_monthly_volume: string | null
   status: string | null
   tier: string | null
+  payment_terms: string | null
 }
 
 const FIELDS: { key: keyof CustomerProfile; label: string; required?: boolean; type?: string }[] = [
@@ -64,6 +65,7 @@ export default function ProfileForm({ initial, email }: { initial: CustomerProfi
       expected_monthly_volume: '',
       status: 'pending',
       tier: 'retail',
+      payment_terms: 'prepaid',
     }
   )
   const [saving, setSaving] = useState(false)
@@ -129,7 +131,10 @@ export default function ProfileForm({ initial, email }: { initial: CustomerProfi
           Status: {form.status ?? 'pending'}
         </span>
         <span style={{ background: '#eef5ea', color: '#6b8f5e', padding: '3px 12px', borderRadius: 999, fontSize: 12 }}>
-          Tier: {form.tier ?? 'retail'}
+          Tier: {TIER_LABELS[form.tier ?? 'retail'] ?? form.tier}
+        </span>
+        <span style={{ background: '#eef5ea', color: '#6b8f5e', padding: '3px 12px', borderRadius: 999, fontSize: 12 }}>
+          Payment: {PAYMENT_TERM_LABELS[form.payment_terms ?? 'prepaid'] ?? 'Prepaid'}
         </span>
       </div>
 

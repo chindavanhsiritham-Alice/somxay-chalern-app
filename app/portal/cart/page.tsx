@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { canOrder } from '@/lib/portal'
 import CartView from './CartView'
 
 export default async function CartPage() {
@@ -14,7 +15,7 @@ export default async function CartPage() {
       .select('status')
       .eq('user_id', user.id)
       .maybeSingle()
-    approved = customer?.status === 'approved'
+    approved = canOrder(customer?.status)
   }
 
   return <CartView approved={approved} />

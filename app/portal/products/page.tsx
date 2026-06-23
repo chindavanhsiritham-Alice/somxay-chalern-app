@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { canOrder } from '@/lib/portal'
 import ProductBrowser, { type PortalProduct } from './ProductBrowser'
 
 export default async function PortalProductsPage() {
@@ -20,7 +21,7 @@ export default async function PortalProductsPage() {
       .select('status')
       .eq('user_id', user.id)
       .maybeSingle()
-    approved = customer?.status === 'approved'
+    approved = canOrder(customer?.status)
   }
 
   return <ProductBrowser products={(products as PortalProduct[]) ?? []} approved={approved} />
