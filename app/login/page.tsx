@@ -85,6 +85,10 @@ export default function LoginPage() {
         >
           {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
         </button>
+
+        <a href="/shop" style={{ display: 'block', textAlign: 'center', marginTop: 16, fontSize: 13, color: '#7a2331' }}>
+          ☕ สั่งกาแฟที่หน้าร้าน (ไม่ต้องเข้าสู่ระบบ)
+        </a>
       </form>
     </div>
   )
