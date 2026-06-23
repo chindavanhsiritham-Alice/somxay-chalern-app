@@ -1,46 +1,65 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-
-const MENU = [
-  { label: 'Product Catalog', href: '/portal' },
-  { label: 'My Orders', href: '/portal/orders' },
-  { label: 'My Shipments', href: '/portal/shipments' },
-  { label: 'My Documents', href: '/portal/documents' },
-  { label: 'Request Sample', href: '/portal/samples' },
-  { label: 'Feedback', href: '/portal/feedback' },
-  { label: 'Contact Sales', href: '/portal/contact' },
-]
+import PortalNav from './PortalNav'
+import { STATUS_BADGE_COLORS } from '@/lib/portal'
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, full_name')
-    .eq('id', user.id)
-    .maybeSingle()
+  // Unauthenticated visitors only reach /portal/login or /portal/register (enforced
+  // by middleware) — render those screens without the portal chrome.
+  if (!user) {
+    return <>{children}</>
+  }
 
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
   if (profile?.role && profile.role !== 'customer') redirect('/admin')
 
+  const { data: customer } = await supabase
+    .from('customers')
+    .select('full_name, company_name, status')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const displayName = customer?.full_name || customer?.company_name || user.email || 'Customer'
+  const status = customer?.status as string | undefined
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-      <aside style={{ width: 220, background: '#2d4a3a', color: '#fff', padding: '24px 20px', flexShrink: 0 }}>
-        <h2 style={{ color: '#a8e063', marginBottom: 4, fontSize: 20 }}>☕ Somxay Coffee</h2>
-        <p style={{ fontSize: 12, opacity: 0.7, marginBottom: 24 }}>
-          Customer Portal{profile?.full_name ? ` — ${profile.full_name}` : ''}
-        </p>
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {MENU.map((item) => (
-            <Link key={item.href} href={item.href} style={{ color: '#fff', textDecoration: 'none', padding: '8px 10px', borderRadius: 6, fontSize: 14 }}>
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-      </aside>
-      <main style={{ flex: 1, padding: 32, background: '#f5f7f2' }}>{children}</main>
+    <div style={{ minHeight: '100vh', background: '#f5f7f2', fontFamily: 'system-ui, sans-serif' }}>
+      <PortalNav name={displayName} />
+
+      <main style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 16px 48px' }}>
+        {!customer && (
+          <Banner color={STATUS_BADGE_COLORS.pending}>
+            Finish setting up your account on the{' '}
+            <Link href="/portal/profile" style={{ color: '#8a6d1a', fontWeight: 600 }}>
+              profile page
+            </Link>{' '}
+            to start ordering.
+          </Banner>
+        )}
+        {status && status !== 'approved' && status !== 'active' && (
+          <Banner color={STATUS_BADGE_COLORS[status] ?? STATUS_BADGE_COLORS.pending}>
+            {status === 'pending' && 'Your account is pending approval. You can browse products, but ordering unlocks once an admin approves you.'}
+            {status === 'suspended' && 'Your account is currently suspended. Please contact our sales team.'}
+            {status === 'blacklisted' && 'Your account has been blocked. Please contact our sales team.'}
+            {status === 'rejected' && 'Your account application was not approved. Please contact our sales team.'}
+          </Banner>
+        )}
+        {children}
+      </main>
+    </div>
+  )
+}
+
+function Banner({ color, children }: { color: { bg: string; fg: string }; children: React.ReactNode }) {
+  return (
+    <div style={{ background: color.bg, color: color.fg, padding: '12px 16px', borderRadius: 10, fontSize: 14, marginBottom: 20 }}>
+      {children}
     </div>
   )
 }

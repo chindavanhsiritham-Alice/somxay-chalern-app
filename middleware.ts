@@ -25,10 +25,13 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
   const path = request.nextUrl.pathname
-  const isPublic = path === '/login' || path.startsWith('/auth')
+  const isPortalAuth = path === '/portal/login' || path === '/portal/register'
+  const isPublic = path === '/login' || isPortalAuth || path.startsWith('/auth')
 
   if (!user && !isPublic) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    // Send unauthenticated portal visitors to the customer login.
+    const target = path.startsWith('/portal') ? '/portal/login' : '/login'
+    return NextResponse.redirect(new URL(target, request.url))
   }
 
   if (user) {
@@ -41,7 +44,8 @@ export async function middleware(request: NextRequest) {
     const role = profile?.role ?? 'customer'
     const homePath = role === 'customer' ? '/portal' : '/admin'
 
-    if (path === '/login' || path === '/') {
+    // Already signed in: keep users out of the auth screens.
+    if (path === '/login' || path === '/' || isPortalAuth) {
       return NextResponse.redirect(new URL(homePath, request.url))
     }
     if (path.startsWith('/admin') && role === 'customer') {
