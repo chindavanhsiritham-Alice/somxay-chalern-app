@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useCart } from '@/lib/shop/cart-context'
@@ -10,6 +10,7 @@ import { placeOrder } from '@/lib/shop/actions'
 
 const BRANCHES = ['สาขาตลาดเช้า เวียงจันทน์', 'สาขาหลวงพระบาง', 'สาขาปากเซ']
 const PAYMENT_METHODS = ['เงินสดหน้าร้าน', 'โอนเงิน/พร้อมเพย์']
+const CONTACT_STORAGE_KEY = 'somxay_shop_contact'
 
 export default function CheckoutPage() {
   const { items, totalPrice, clear } = useCart()
@@ -21,6 +22,20 @@ export default function CheckoutPage() {
   const [note, setNote] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(CONTACT_STORAGE_KEY)
+      if (raw) {
+        const saved = JSON.parse(raw)
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time hydrate from localStorage on mount
+        if (saved.customerName) setCustomerName(saved.customerName)
+        if (saved.customerPhone) setCustomerPhone(saved.customerPhone)
+      }
+    } catch {
+      // ignore corrupt/missing saved contact
+    }
+  }, [])
 
   if (items.length === 0) {
     return (
@@ -46,6 +61,7 @@ export default function CheckoutPage() {
       return
     }
 
+    window.localStorage.setItem(CONTACT_STORAGE_KEY, JSON.stringify({ customerName, customerPhone }))
     clear()
     router.push(`/shop/order/${result.orderId}`)
   }

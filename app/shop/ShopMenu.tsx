@@ -36,26 +36,7 @@ export default function ShopMenu({
             </h2>
             <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
               {items.map((product) => (
-                <button
-                  key={product.id}
-                  onClick={() => setActiveProduct(product)}
-                  style={{
-                    textAlign: 'left',
-                    background: shopTheme.card,
-                    border: `1px solid ${shopTheme.border}`,
-                    borderRadius: 14,
-                    padding: 16,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 6,
-                  }}
-                >
-                  <div style={{ fontSize: 32 }}>{product.image_emoji}</div>
-                  <div style={{ fontWeight: 700, color: shopTheme.text, fontSize: 15 }}>{product.name}</div>
-                  {product.description && <div style={{ fontSize: 12, color: shopTheme.muted }}>{product.description}</div>}
-                  <div style={{ fontWeight: 700, color: shopTheme.maroon, marginTop: 4 }}>{product.base_price} บาท</div>
-                </button>
+                <ProductCard key={product.id} product={product} onCustomize={() => setActiveProduct(product)} />
               ))}
             </div>
           </section>
@@ -63,6 +44,77 @@ export default function ShopMenu({
       )}
 
       {activeProduct && <CustomizeModal product={activeProduct} addons={addons} onClose={() => setActiveProduct(null)} />}
+    </div>
+  )
+}
+
+function ProductCard({ product, onCustomize }: { product: ShopProduct; onCustomize: () => void }) {
+  const { addItem } = useCart()
+  const [justAdded, setJustAdded] = useState(false)
+
+  function quickAdd(e: React.MouseEvent) {
+    e.stopPropagation()
+    const temperature = product.hot_available ? 'hot' : 'iced'
+    const sweetness = SWEETNESS_LEVELS[0]
+    addItem({
+      key: cartItemKey(product.id, 'normal', temperature, sweetness, []),
+      productId: product.id,
+      name: product.name,
+      emoji: product.image_emoji,
+      unitPrice: product.base_price,
+      size: 'normal',
+      temperature,
+      sweetness,
+      addons: [],
+      quantity: 1,
+    })
+    setJustAdded(true)
+    setTimeout(() => setJustAdded(false), 900)
+  }
+
+  return (
+    <div
+      style={{
+        textAlign: 'left',
+        background: shopTheme.card,
+        border: `1px solid ${shopTheme.border}`,
+        borderRadius: 14,
+        padding: 16,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
+        position: 'relative',
+      }}
+    >
+      <button onClick={onCustomize} style={{ all: 'unset', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ fontSize: 32 }}>{product.image_emoji}</div>
+        <div style={{ fontWeight: 700, color: shopTheme.text, fontSize: 15 }}>{product.name}</div>
+        {product.description && <div style={{ fontSize: 12, color: shopTheme.muted }}>{product.description}</div>}
+      </button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+        <span style={{ fontWeight: 700, color: shopTheme.maroon }}>{product.base_price} บาท</span>
+        <button
+          onClick={quickAdd}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: '50%',
+            border: 'none',
+            background: justAdded ? '#3a8f4a' : shopTheme.maroon,
+            color: '#fff',
+            fontSize: 18,
+            lineHeight: 1,
+            cursor: 'pointer',
+          }}
+          aria-label={`เพิ่ม ${product.name} ลงตะกร้า (ค่าเริ่มต้น)`}
+          title="เพิ่มลงตะกร้าแบบปกติ"
+        >
+          {justAdded ? '✓' : '+'}
+        </button>
+      </div>
+      <button onClick={onCustomize} style={{ all: 'unset', cursor: 'pointer', fontSize: 11, color: shopTheme.muted, textDecoration: 'underline' }}>
+        ปรับแต่ง (ขนาด/ความหวาน/เพิ่มเติม)
+      </button>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { CartProvider } from '@/lib/shop/cart-context'
 import ShopHeader from './ShopHeader'
+import StickyCartBar from './StickyCartBar'
 import { shopTheme } from '@/lib/shop/theme'
 
 export const metadata = {
@@ -12,7 +13,8 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
     <CartProvider>
       <div style={{ minHeight: '100vh', background: shopTheme.cream, fontFamily: 'system-ui, sans-serif', color: shopTheme.text }}>
         <ShopHeader />
-        <main style={{ maxWidth: 1000, margin: '0 auto', padding: '24px 20px 60px' }}>{children}</main>
+        <main style={{ maxWidth: 1000, margin: '0 auto', padding: '24px 20px 90px' }}>{children}</main>
+        <StickyCartBar />
       </div>
     </CartProvider>
   )

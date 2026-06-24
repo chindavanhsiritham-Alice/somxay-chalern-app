@@ -2,45 +2,83 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
-const MENUS: Record<string, { label: string; href: string; icon: string }[]> = {
+type MenuItem = { label: string; href: string; icon: string }
+type MenuSection = { title: string; items: MenuItem[] }
+
+const SECTIONS: Record<string, MenuSection[]> = {
   admin: [
-    { label: 'Executive Dashboard', href: '/admin', icon: '📊' },
-    { label: 'Customer Management', href: '/admin/customers', icon: '👥' },
-    { label: 'Product & Inventory', href: '/admin/products', icon: '📦' },
-    { label: 'Exchange Rates', href: '/admin/exchange-rates', icon: '💱' },
-    { label: 'Orders', href: '/admin/orders', icon: '🛒' },
-    { label: 'Shop Orders', href: '/admin/shop-orders', icon: '☕' },
-    { label: 'Quotations', href: '/admin/quotations', icon: '📝' },
-    { label: 'Contracts', href: '/admin/contracts', icon: '📄' },
-    { label: 'Payments', href: '/admin/payments', icon: '💳' },
-    { label: 'Shipments', href: '/admin/shipments', icon: '🚚' },
-    { label: 'Samples', href: '/admin/samples', icon: '🧪' },
-    { label: 'Documents', href: '/admin/documents', icon: '📁' },
-    { label: 'Reports', href: '/admin/reports', icon: '📈' },
-    { label: 'User Management', href: '/admin/users', icon: '👤' },
+    { title: 'ภาพรวม', items: [{ label: 'Executive Dashboard', href: '/admin', icon: '📊' }] },
+    {
+      title: 'งานขาย',
+      items: [
+        { label: 'Customer Management', href: '/admin/customers', icon: '👥' },
+        { label: 'Quotations', href: '/admin/quotations', icon: '📝' },
+        { label: 'Orders', href: '/admin/orders', icon: '🛒' },
+        { label: 'Shop Orders', href: '/admin/shop-orders', icon: '☕' },
+        { label: 'Samples', href: '/admin/samples', icon: '🧪' },
+      ],
+    },
+    {
+      title: 'สินค้า/ราคา',
+      items: [
+        { label: 'Product & Inventory', href: '/admin/products', icon: '📦' },
+        { label: 'Exchange Rates', href: '/admin/exchange-rates', icon: '💱' },
+      ],
+    },
+    {
+      title: 'ปฏิบัติการ',
+      items: [
+        { label: 'Contracts', href: '/admin/contracts', icon: '📄' },
+        { label: 'Payments', href: '/admin/payments', icon: '💳' },
+        { label: 'Shipments', href: '/admin/shipments', icon: '🚚' },
+        { label: 'Documents', href: '/admin/documents', icon: '📁' },
+      ],
+    },
+    { title: 'รายงาน', items: [{ label: 'Reports', href: '/admin/reports', icon: '📈' }] },
+    { title: 'ระบบ', items: [{ label: 'User Management', href: '/admin/users', icon: '👤' }] },
   ],
   manager: [
-    { label: 'Executive Dashboard', href: '/admin', icon: '📊' },
-    { label: 'Customer Management', href: '/admin/customers', icon: '👥' },
-    { label: 'Product & Inventory', href: '/admin/products', icon: '📦' },
-    { label: 'Exchange Rates', href: '/admin/exchange-rates', icon: '💱' },
-    { label: 'Orders', href: '/admin/orders', icon: '🛒' },
-    { label: 'Shop Orders', href: '/admin/shop-orders', icon: '☕' },
-    { label: 'Quotations', href: '/admin/quotations', icon: '📝' },
-    { label: 'Contracts', href: '/admin/contracts', icon: '📄' },
-    { label: 'Payments', href: '/admin/payments', icon: '💳' },
-    { label: 'Shipments', href: '/admin/shipments', icon: '🚚' },
-    { label: 'Samples', href: '/admin/samples', icon: '🧪' },
-    { label: 'Documents', href: '/admin/documents', icon: '📁' },
-    { label: 'Reports', href: '/admin/reports', icon: '📈' },
+    { title: 'ภาพรวม', items: [{ label: 'Executive Dashboard', href: '/admin', icon: '📊' }] },
+    {
+      title: 'งานขาย',
+      items: [
+        { label: 'Customer Management', href: '/admin/customers', icon: '👥' },
+        { label: 'Quotations', href: '/admin/quotations', icon: '📝' },
+        { label: 'Orders', href: '/admin/orders', icon: '🛒' },
+        { label: 'Shop Orders', href: '/admin/shop-orders', icon: '☕' },
+        { label: 'Samples', href: '/admin/samples', icon: '🧪' },
+      ],
+    },
+    {
+      title: 'สินค้า/ราคา',
+      items: [
+        { label: 'Product & Inventory', href: '/admin/products', icon: '📦' },
+        { label: 'Exchange Rates', href: '/admin/exchange-rates', icon: '💱' },
+      ],
+    },
+    {
+      title: 'ปฏิบัติการ',
+      items: [
+        { label: 'Contracts', href: '/admin/contracts', icon: '📄' },
+        { label: 'Payments', href: '/admin/payments', icon: '💳' },
+        { label: 'Shipments', href: '/admin/shipments', icon: '🚚' },
+        { label: 'Documents', href: '/admin/documents', icon: '📁' },
+      ],
+    },
+    { title: 'รายงาน', items: [{ label: 'Reports', href: '/admin/reports', icon: '📈' }] },
   ],
   sales: [
-    { label: 'Customers', href: '/admin/customers', icon: '👥' },
-    { label: 'Quotations', href: '/admin/quotations', icon: '📝' },
-    { label: 'Orders', href: '/admin/orders', icon: '🛒' },
-    { label: 'Shop Orders', href: '/admin/shop-orders', icon: '☕' },
-    { label: 'Samples', href: '/admin/samples', icon: '🧪' },
-    { label: 'Follow-up Tasks', href: '/admin/tasks', icon: '✅' },
+    {
+      title: 'งานขาย',
+      items: [
+        { label: 'Customers', href: '/admin/customers', icon: '👥' },
+        { label: 'Quotations', href: '/admin/quotations', icon: '📝' },
+        { label: 'Orders', href: '/admin/orders', icon: '🛒' },
+        { label: 'Shop Orders', href: '/admin/shop-orders', icon: '☕' },
+        { label: 'Samples', href: '/admin/samples', icon: '🧪' },
+        { label: 'Follow-up Tasks', href: '/admin/tasks', icon: '✅' },
+      ],
+    },
   ],
 }
 
@@ -58,34 +96,43 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const role = profile?.role ?? 'customer'
   if (role === 'customer') redirect('/portal')
 
-  const menu = MENUS[role] ?? MENUS.sales
+  const sections = SECTIONS[role] ?? SECTIONS.sales
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-      <aside style={{ width: 250, background: '#1f3d2e', color: '#fff', padding: '28px 18px', flexShrink: 0 }}>
+      <aside style={{ width: 250, background: '#1f3d2e', color: '#fff', padding: '28px 18px', flexShrink: 0, overflowY: 'auto' }}>
         <h2 style={{ color: '#a8e063', marginBottom: 2, fontSize: 20 }}>☕ Somxay Coffee</h2>
-        <p style={{ fontSize: 12, opacity: 0.65, marginBottom: 28 }}>
+        <p style={{ fontSize: 12, opacity: 0.65, marginBottom: 24 }}>
           {role.toUpperCase()}{profile?.full_name ? ` — ${profile.full_name}` : ''}
         </p>
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {menu.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                color: '#fff',
-                textDecoration: 'none',
-                padding: '10px 12px',
-                borderRadius: 8,
-                fontSize: 14,
-              }}
-            >
-              <span style={{ fontSize: 16 }}>{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {sections.map((section) => (
+            <div key={section.title}>
+              <div style={{ fontSize: 11, opacity: 0.55, textTransform: 'uppercase', letterSpacing: 0.6, padding: '0 12px', marginBottom: 4 }}>
+                {section.title}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {section.items.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      color: '#fff',
+                      textDecoration: 'none',
+                      padding: '9px 12px',
+                      borderRadius: 8,
+                      fontSize: 14,
+                    }}
+                  >
+                    <span style={{ fontSize: 16 }}>{item.icon}</span>
+                    <span>{item.label}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
       </aside>
