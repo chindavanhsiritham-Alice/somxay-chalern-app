@@ -34,6 +34,13 @@ const SECTIONS: Record<string, MenuSection[]> = {
       ],
     },
     {
+      title: 'คิวรับเชอร์รี่',
+      items: [
+        { label: 'Delivery Queue', href: '/admin/delivery-queue', icon: '🚦' },
+        { label: 'Delivery Reports', href: '/admin/delivery-reports', icon: '⏱️' },
+      ],
+    },
+    {
       title: 'ปฏิบัติการ',
       items: [
         { label: 'Contracts', href: '/admin/contracts', icon: '📄' },
@@ -70,6 +77,13 @@ const SECTIONS: Record<string, MenuSection[]> = {
         { label: 'Cherry Bookings', href: '/admin/cherry-bookings', icon: '🍒' },
         { label: 'Farmer Credit', href: '/admin/farmer-credit', icon: '💳' },
         { label: 'Farmer Year Summary', href: '/admin/farmer-year-summary', icon: '📅' },
+      ],
+    },
+    {
+      title: 'คิวรับเชอร์รี่',
+      items: [
+        { label: 'Delivery Queue', href: '/admin/delivery-queue', icon: '🚦' },
+        { label: 'Delivery Reports', href: '/admin/delivery-reports', icon: '⏱️' },
       ],
     },
     {

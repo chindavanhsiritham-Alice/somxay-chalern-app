@@ -3,7 +3,14 @@ import { createClient } from '@/lib/supabase/server'
 import { getOrCreateFarmer } from '@/lib/farmer/farmer'
 import { getCherryPrices } from '@/lib/farmer/prices'
 import { farmerTheme } from '@/lib/farmer/theme'
-import { BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS, type BookingStatus, type PaymentStatus } from '@/lib/farmer/types'
+import {
+  ARRIVAL_STATUS_LABELS,
+  BOOKING_STATUS_LABELS,
+  PAYMENT_STATUS_LABELS,
+  type ArrivalStatus,
+  type BookingStatus,
+  type PaymentStatus,
+} from '@/lib/farmer/types'
 
 export default async function FarmerHomePage() {
   const supabase = await createClient()
@@ -15,7 +22,7 @@ export default async function FarmerHomePage() {
   const [{ data: pendingBookings }, { data: latestPayments }, { data: debt }] = await Promise.all([
     supabase
       .from('cherry_bookings')
-      .select('id, booking_code, coffee_type, estimated_quantity, quantity_unit, delivery_date, status')
+      .select('id, booking_code, coffee_type, estimated_quantity, quantity_unit, delivery_date, status, queue_number, arrival_status')
       .eq('farmer_id', farmer.id)
       .in('status', ['pending', 'confirmed'])
       .order('created_at', { ascending: false })
@@ -74,6 +81,11 @@ export default async function FarmerHomePage() {
                 <span>{b.booking_code}</span>
                 <StatusBadge status={b.status as BookingStatus} />
               </div>
+              {b.queue_number && (
+                <div style={{ fontSize: 12, color: farmerTheme.green, fontWeight: 700, marginTop: 2 }}>
+                  {b.queue_number} · {ARRIVAL_STATUS_LABELS[(b.arrival_status as ArrivalStatus) ?? 'waiting']}
+                </div>
+              )}
               <div style={{ fontSize: 12, color: farmerTheme.muted, marginTop: 4 }}>
                 {b.coffee_type} · {b.estimated_quantity} {b.quantity_unit} · ส่ง {b.delivery_date}
               </div>

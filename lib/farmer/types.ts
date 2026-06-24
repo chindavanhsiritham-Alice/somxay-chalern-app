@@ -31,6 +31,36 @@ export type Farmer = {
   village: string | null
 }
 
+export type ArrivalStatus = 'waiting' | 'arrived' | 'weighing' | 'quality_check' | 'completed'
+
+export const ARRIVAL_STATUS_ORDER: ArrivalStatus[] = ['waiting', 'arrived', 'weighing', 'quality_check', 'completed']
+
+export const ARRIVAL_STATUS_LABELS: Record<ArrivalStatus, string> = {
+  waiting: 'รอเข้าคิว',
+  arrived: 'มาถึงแล้ว',
+  weighing: 'กำลังชั่งน้ำหนัก',
+  quality_check: 'กำลังตรวจคุณภาพ',
+  completed: 'เสร็จสิ้น',
+}
+
+export type DeliverySlot = {
+  id: string
+  start_time: string
+  end_time: string
+  capacity_kg: number
+  active: boolean
+  created_at: string
+}
+
+export type SlotAvailability = {
+  slot_id: string
+  start_time: string
+  end_time: string
+  capacity_kg: number
+  booked_kg: number
+  remaining_kg: number
+}
+
 export type CherryBooking = {
   id: string
   booking_code: string
@@ -44,6 +74,13 @@ export type CherryBooking = {
   photo_url: string | null
   price_at_booking: number
   status: BookingStatus
+  slot_id: string | null
+  queue_number: string | null
+  arrival_status: ArrivalStatus
+  arrived_at: string | null
+  weighing_started_at: string | null
+  quality_check_started_at: string | null
+  completed_at: string | null
   created_at: string
 }
 
@@ -138,4 +175,12 @@ export function generateBookingCode() {
   const stamp = now.toISOString().slice(2, 10).replace(/-/g, '')
   const rand = Math.floor(Math.random() * 9000 + 1000)
   return `CB${stamp}${rand}`
+}
+
+export function toKg(quantity: number, unit: string) {
+  return unit === 'ton' ? quantity * 1000 : quantity
+}
+
+export function generateQueueNumber(year: number, sequence: number) {
+  return `Q-${year}-${String(sequence).padStart(4, '0')}`
 }

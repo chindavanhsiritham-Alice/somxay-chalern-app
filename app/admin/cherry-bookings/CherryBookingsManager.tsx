@@ -139,7 +139,14 @@ function BookingCard({
     <div style={{ background: '#fff', borderRadius: 12, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={onToggle}>
         <div>
-          <div style={{ fontWeight: 700, color: '#2d4a3a' }}>{booking.booking_code}</div>
+          <div style={{ fontWeight: 700, color: '#2d4a3a' }}>
+            {booking.booking_code}
+            {booking.queue_number && (
+              <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, color: '#2d7a3a', background: '#e8f5e9', padding: '2px 8px', borderRadius: 999 }}>
+                {booking.queue_number}
+              </span>
+            )}
+          </div>
           <div style={{ fontSize: 12, color: '#6b8f5e' }}>
             {farmerName}
             {farmerPhone ? ` · ${farmerPhone}` : ''} · {booking.coffee_type} · {booking.estimated_quantity} {booking.quantity_unit}

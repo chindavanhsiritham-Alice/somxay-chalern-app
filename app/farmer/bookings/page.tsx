@@ -1,7 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { getOrCreateFarmer } from '@/lib/farmer/farmer'
 import { farmerTheme } from '@/lib/farmer/theme'
-import { BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS, type BookingStatus, type PaymentStatus } from '@/lib/farmer/types'
+import {
+  ARRIVAL_STATUS_LABELS,
+  BOOKING_STATUS_LABELS,
+  PAYMENT_STATUS_LABELS,
+  type ArrivalStatus,
+  type BookingStatus,
+  type PaymentStatus,
+} from '@/lib/farmer/types'
 
 export default async function FarmerBookingsPage() {
   const supabase = await createClient()
@@ -12,7 +19,7 @@ export default async function FarmerBookingsPage() {
   const [{ data: bookings }, { data: payments }] = await Promise.all([
     supabase
       .from('cherry_bookings')
-      .select('id, booking_code, coffee_type, estimated_quantity, quantity_unit, delivery_date, status')
+      .select('id, booking_code, coffee_type, estimated_quantity, quantity_unit, delivery_date, status, queue_number, arrival_status')
       .eq('farmer_id', farmer.id)
       .order('created_at', { ascending: false }),
     supabase.from('farmer_payments').select('booking_id, status').eq('farmer_id', farmer.id),
@@ -39,6 +46,11 @@ export default async function FarmerBookingsPage() {
                   <span style={{ fontWeight: 700, fontSize: 14 }}>{b.booking_code}</span>
                   <Badge label={BOOKING_STATUS_LABELS[b.status as BookingStatus]} status={b.status as BookingStatus} />
                 </div>
+                {b.queue_number && (
+                  <div style={{ fontSize: 13, color: farmerTheme.green, fontWeight: 700, marginTop: 6 }}>
+                    {b.queue_number} · {ARRIVAL_STATUS_LABELS[(b.arrival_status as ArrivalStatus) ?? 'waiting']}
+                  </div>
+                )}
                 <div style={{ fontSize: 13, color: farmerTheme.text, marginTop: 6 }}>
                   {b.coffee_type} · {b.estimated_quantity} {b.quantity_unit}
                 </div>
