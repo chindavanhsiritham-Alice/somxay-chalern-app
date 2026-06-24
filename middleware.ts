@@ -39,16 +39,19 @@ export async function middleware(request: NextRequest) {
       .maybeSingle()
 
     const role = profile?.role ?? 'customer'
-    const homePath = role === 'customer' ? '/portal' : '/admin'
+    const homePath = role === 'customer' ? '/portal' : role === 'farmer' ? '/farmer' : '/admin'
 
     if (path === '/login' || path === '/') {
       return NextResponse.redirect(new URL(homePath, request.url))
     }
-    if (path.startsWith('/admin') && role === 'customer') {
-      return NextResponse.redirect(new URL('/portal', request.url))
+    if (path.startsWith('/admin') && (role === 'customer' || role === 'farmer')) {
+      return NextResponse.redirect(new URL(homePath, request.url))
     }
     if (path.startsWith('/portal') && role !== 'customer') {
-      return NextResponse.redirect(new URL('/admin', request.url))
+      return NextResponse.redirect(new URL(homePath, request.url))
+    }
+    if (path.startsWith('/farmer') && role !== 'farmer') {
+      return NextResponse.redirect(new URL(homePath, request.url))
     }
   }
 

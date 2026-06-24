@@ -25,6 +25,7 @@ const SECTIONS: Record<string, MenuSection[]> = {
         { label: 'Exchange Rates', href: '/admin/exchange-rates', icon: '💱' },
       ],
     },
+    { title: 'รับซื้อเชอร์รี่', items: [{ label: 'Cherry Bookings', href: '/admin/cherry-bookings', icon: '🍒' }] },
     {
       title: 'ปฏิบัติการ',
       items: [
@@ -56,6 +57,7 @@ const SECTIONS: Record<string, MenuSection[]> = {
         { label: 'Exchange Rates', href: '/admin/exchange-rates', icon: '💱' },
       ],
     },
+    { title: 'รับซื้อเชอร์รี่', items: [{ label: 'Cherry Bookings', href: '/admin/cherry-bookings', icon: '🍒' }] },
     {
       title: 'ปฏิบัติการ',
       items: [
