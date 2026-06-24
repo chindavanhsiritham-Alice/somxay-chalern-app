@@ -11,7 +11,9 @@ export default async function FarmerPaymentsPage() {
 
   const { data: payments } = await supabase
     .from('farmer_payments')
-    .select('id, accepted_weight, price_per_kg, gross_amount, fertilizer_deduction, net_payable, payment_method, payment_slip_url, status, paid_at, created_at')
+    .select(
+      'id, accepted_weight, price_per_kg, gross_amount, fertilizer_deduction, pesticide_deduction, cash_advance_deduction, net_payable, payment_method, payment_slip_url, status, paid_at, created_at'
+    )
     .eq('farmer_id', farmer.id)
     .order('created_at', { ascending: false })
 
@@ -33,6 +35,12 @@ export default async function FarmerPaymentsPage() {
               <Row label="ราคา/กก." value={`${p.price_per_kg} บาท`} />
               <Row label="ยอดรวม" value={`${Number(p.gross_amount).toLocaleString()} บาท`} />
               <Row label="หักค่าปุ๋ย" value={`${Number(p.fertilizer_deduction).toLocaleString()} บาท`} />
+              {Number(p.pesticide_deduction) > 0 && (
+                <Row label="หักค่ายา/สารเคมี" value={`${Number(p.pesticide_deduction).toLocaleString()} บาท`} />
+              )}
+              {Number(p.cash_advance_deduction) > 0 && (
+                <Row label="หักเงินเบิกล่วงหน้า" value={`${Number(p.cash_advance_deduction).toLocaleString()} บาท`} />
+              )}
               <Row label="วิธีจ่ายเงิน" value={p.payment_method ?? '-'} />
               {p.payment_slip_url && (
                 <a href={p.payment_slip_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: farmerTheme.green }}>

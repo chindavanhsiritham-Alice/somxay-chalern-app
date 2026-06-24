@@ -69,12 +69,68 @@ export type FarmerPayment = {
   price_per_kg: number
   gross_amount: number
   fertilizer_deduction: number
+  pesticide_deduction: number
+  cash_advance_deduction: number
   net_payable: number
   payment_method: string | null
   payment_slip_url: string | null
   status: PaymentStatus
   paid_at: string | null
   created_at: string
+}
+
+export type DebtTransactionType =
+  | 'fertilizer'
+  | 'pesticide'
+  | 'cash_advance'
+  | 'cherry_sale'
+  | 'payment'
+  | 'deduction'
+  | 'adjustment'
+
+export const DEBT_TRANSACTION_LABELS: Record<DebtTransactionType, string> = {
+  fertilizer: 'เพิ่มหนี้ค่าปุ๋ย',
+  pesticide: 'เพิ่มหนี้ค่ายา/สารเคมี',
+  cash_advance: 'เบิกเงินล่วงหน้า',
+  cherry_sale: 'ขายเชอร์รี่',
+  payment: 'จ่ายเงิน',
+  deduction: 'หักหนี้จากการขายเชอร์รี่',
+  adjustment: 'ปรับปรุงยอด',
+}
+
+export type DebtCategory = 'fertilizer' | 'pesticide' | 'cash_advance' | 'other'
+
+export const DEBT_CATEGORY_LABELS: Record<DebtCategory, string> = {
+  fertilizer: 'หนี้ค่าปุ๋ย',
+  pesticide: 'หนี้ค่ายา/สารเคมี',
+  cash_advance: 'เงินเบิกล่วงหน้า',
+  other: 'หนี้อื่นๆ',
+}
+
+export type FarmerDebtBalance = {
+  farmer_id: string
+  balance: number
+  fertilizer_balance: number
+  pesticide_balance: number
+  cash_advance_balance: number
+  other_balance: number
+  updated_at: string
+}
+
+export type FarmerDebtLedgerEntry = {
+  id: string
+  farmer_id: string
+  transaction_type: DebtTransactionType
+  debit: number
+  credit: number
+  balance_after: number
+  note: string | null
+  created_by: string | null
+  created_at: string
+}
+
+export function totalOutstandingDebt(debt: FarmerDebtBalance) {
+  return debt.fertilizer_balance + debt.pesticide_balance + debt.cash_advance_balance + debt.other_balance
 }
 
 export function generateBookingCode() {

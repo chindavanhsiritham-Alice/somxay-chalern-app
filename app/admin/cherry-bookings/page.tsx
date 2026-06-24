@@ -6,7 +6,7 @@ export default async function AdminCherryBookingsPage() {
 
   const { data: bookings } = await supabase
     .from('cherry_bookings')
-    .select('*, farmers(full_name, phone, village), cherry_receivings(*), farmer_payments(*)')
+    .select('*, farmers(full_name, phone, village, farmer_debts(*)), cherry_receivings(*), farmer_payments(*)')
     .order('created_at', { ascending: false })
     .limit(200)
 

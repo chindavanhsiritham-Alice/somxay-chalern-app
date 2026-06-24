@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Farmer } from './types'
+import type { Farmer, FarmerDebtBalance } from './types'
 
 /**
  * Look up the farmers row for the signed-in profile, creating it on first
@@ -26,4 +26,26 @@ export async function getOrCreateFarmer(
     .single()
 
   return created as Farmer
+}
+
+/**
+ * Read a farmer's category debt balances, defaulting every field to 0 when
+ * no farmer_debts row exists yet (rows are created lazily on first write).
+ */
+export async function getFarmerDebtBalance(supabase: SupabaseClient, farmerId: string): Promise<FarmerDebtBalance> {
+  const { data } = await supabase
+    .from('farmer_debts')
+    .select('farmer_id, balance, fertilizer_balance, pesticide_balance, cash_advance_balance, other_balance, updated_at')
+    .eq('farmer_id', farmerId)
+    .maybeSingle()
+
+  return {
+    farmer_id: farmerId,
+    balance: Number(data?.balance ?? 0),
+    fertilizer_balance: Number(data?.fertilizer_balance ?? 0),
+    pesticide_balance: Number(data?.pesticide_balance ?? 0),
+    cash_advance_balance: Number(data?.cash_advance_balance ?? 0),
+    other_balance: Number(data?.other_balance ?? 0),
+    updated_at: data?.updated_at ?? new Date(0).toISOString(),
+  }
 }

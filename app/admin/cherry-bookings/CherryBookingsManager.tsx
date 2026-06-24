@@ -5,14 +5,17 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import {
   BOOKING_STATUS_LABELS,
+  totalOutstandingDebt,
   type BookingStatus,
   type CherryBooking,
   type CherryReceiving,
+  type FarmerDebtBalance,
+  type FarmerDebtLedgerEntry,
   type FarmerPayment,
 } from '@/lib/farmer/types'
 
 export type AdminBookingRow = CherryBooking & {
-  farmers: { full_name: string; phone: string | null; village: string | null } | null
+  farmers: { full_name: string; phone: string | null; village: string | null; farmer_debts: FarmerDebtBalance[] | FarmerDebtBalance | null } | null
   cherry_receivings: CherryReceiving[] | CherryReceiving | null
   farmer_payments: FarmerPayment[] | FarmerPayment | null
 }
@@ -22,12 +25,25 @@ function toOne<T>(v: T[] | T | null | undefined): T | null {
   return Array.isArray(v) ? v[0] ?? null : v
 }
 
+function emptyDebt(farmerId: string): FarmerDebtBalance {
+  return {
+    farmer_id: farmerId,
+    balance: 0,
+    fertilizer_balance: 0,
+    pesticide_balance: 0,
+    cash_advance_balance: 0,
+    other_balance: 0,
+    updated_at: new Date(0).toISOString(),
+  }
+}
+
 type Row = {
   booking: CherryBooking
   farmerName: string
   farmerPhone: string | null
   receiving: CherryReceiving | null
   payment: FarmerPayment | null
+  debt: FarmerDebtBalance
 }
 
 function toRow(r: AdminBookingRow): Row {
@@ -37,6 +53,7 @@ function toRow(r: AdminBookingRow): Row {
     farmerPhone: r.farmers?.phone ?? null,
     receiving: toOne(r.cherry_receivings),
     payment: toOne(r.farmer_payments),
+    debt: toOne(r.farmers?.farmer_debts) ?? emptyDebt(r.farmer_id),
   }
 }
 
@@ -116,7 +133,7 @@ function BookingCard({
   onUpdate: (patch: Partial<Row>) => void
   supabase: SupabaseClient
 }) {
-  const { booking, farmerName, farmerPhone, receiving, payment } = row
+  const { booking, farmerName, farmerPhone, receiving, payment, debt } = row
 
   return (
     <div style={{ background: '#fff', borderRadius: 12, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
@@ -151,9 +168,10 @@ function BookingCard({
           {!receiving ? (
             <ReceivingForm
               booking={booking}
+              debt={debt}
               supabase={supabase}
-              onSaved={(savedReceiving, savedPayment) =>
-                onUpdate({ receiving: savedReceiving, payment: savedPayment, booking: { ...booking, status: 'received' } })
+              onSaved={(savedReceiving, savedPayment, newDebt) =>
+                onUpdate({ receiving: savedReceiving, payment: savedPayment, debt: newDebt, booking: { ...booking, status: 'received' } })
               }
             />
           ) : payment && payment.status === 'pending' ? (
@@ -176,12 +194,14 @@ function BookingStatusBadge({ status }: { status: BookingStatus }) {
 
 function ReceivingForm({
   booking,
+  debt,
   supabase,
   onSaved,
 }: {
   booking: CherryBooking
+  debt: FarmerDebtBalance
   supabase: SupabaseClient
-  onSaved: (receiving: CherryReceiving, payment: FarmerPayment) => void
+  onSaved: (receiving: CherryReceiving, payment: FarmerPayment, newDebt: FarmerDebtBalance) => void
 }) {
   const [truckPlate, setTruckPlate] = useState('')
   const [grossWeight, setGrossWeight] = useState('')
@@ -190,7 +210,9 @@ function ReceivingForm({
   const [defectPercent, setDefectPercent] = useState('')
   const [deductionPercent, setDeductionPercent] = useState('')
   const [acceptedWeightOverride, setAcceptedWeightOverride] = useState('')
-  const [fertilizerDeduction, setFertilizerDeduction] = useState('0')
+  const [fertilizerDeduction, setFertilizerDeduction] = useState(String(debt.fertilizer_balance || 0))
+  const [pesticideDeduction, setPesticideDeduction] = useState(String(debt.pesticide_balance || 0))
+  const [cashAdvanceDeduction, setCashAdvanceDeduction] = useState(String(debt.cash_advance_balance || 0))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -198,7 +220,18 @@ function ReceivingForm({
   const suggestedAccepted = netWeight > 0 ? netWeight * (1 - Number(deductionPercent || 0) / 100) : 0
   const acceptedWeight = acceptedWeightOverride !== '' ? Number(acceptedWeightOverride) : suggestedAccepted
   const grossAmount = acceptedWeight * booking.price_at_booking
-  const netPayable = grossAmount - Number(fertilizerDeduction || 0)
+
+  // Tiered cascade: fertilizer debt first, then pesticide, then cash advance.
+  // Each tier is capped by what's still owed in that category and by what's
+  // left of the gross sale amount, never exceeding the admin-entered amount.
+  let remaining = grossAmount
+  const fertilizerApplied = Math.max(0, Math.min(Number(fertilizerDeduction) || 0, remaining, debt.fertilizer_balance))
+  remaining -= fertilizerApplied
+  const pesticideApplied = Math.max(0, Math.min(Number(pesticideDeduction) || 0, remaining, debt.pesticide_balance))
+  remaining -= pesticideApplied
+  const cashAdvanceApplied = Math.max(0, Math.min(Number(cashAdvanceDeduction) || 0, remaining, debt.cash_advance_balance))
+  remaining -= cashAdvanceApplied
+  const netPayable = grossAmount - fertilizerApplied - pesticideApplied - cashAdvanceApplied
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -236,7 +269,6 @@ function ReceivingForm({
 
     await supabase.from('cherry_bookings').update({ status: 'received' }).eq('id', booking.id)
 
-    const fertilizerAmount = Number(fertilizerDeduction) || 0
     const { data: paymentRow, error: paymentError } = await supabase
       .from('farmer_payments')
       .insert({
@@ -245,28 +277,91 @@ function ReceivingForm({
         accepted_weight: acceptedWeight,
         price_per_kg: booking.price_at_booking,
         gross_amount: grossAmount,
-        fertilizer_deduction: fertilizerAmount,
+        fertilizer_deduction: fertilizerApplied,
+        pesticide_deduction: pesticideApplied,
+        cash_advance_deduction: cashAdvanceApplied,
         net_payable: netPayable,
         status: 'pending',
       })
       .select()
       .single()
 
-    setSaving(false)
     if (paymentError || !paymentRow) {
+      setSaving(false)
       setError('บันทึกข้อมูลรับเข้าแล้ว แต่ไม่สามารถคำนวณเงินจ่ายได้')
       return
     }
 
-    if (fertilizerAmount > 0) {
-      const { data: debtRow } = await supabase.from('farmer_debts').select('balance').eq('farmer_id', booking.farmer_id).maybeSingle()
-      const newBalance = Math.max(0, Number(debtRow?.balance ?? 0) - fertilizerAmount)
-      await supabase
-        .from('farmer_debts')
-        .upsert({ farmer_id: booking.farmer_id, balance: newBalance, updated_at: new Date().toISOString() }, { onConflict: 'farmer_id' })
+    const newDebt: FarmerDebtBalance = {
+      ...debt,
+      fertilizer_balance: Math.max(0, debt.fertilizer_balance - fertilizerApplied),
+      pesticide_balance: Math.max(0, debt.pesticide_balance - pesticideApplied),
+      cash_advance_balance: Math.max(0, debt.cash_advance_balance - cashAdvanceApplied),
+      updated_at: new Date().toISOString(),
     }
+    newDebt.balance = newDebt.fertilizer_balance
 
-    onSaved(receivingRow as CherryReceiving, paymentRow as FarmerPayment)
+    await supabase.from('farmer_debts').upsert(
+      {
+        farmer_id: booking.farmer_id,
+        balance: newDebt.balance,
+        fertilizer_balance: newDebt.fertilizer_balance,
+        pesticide_balance: newDebt.pesticide_balance,
+        cash_advance_balance: newDebt.cash_advance_balance,
+        other_balance: newDebt.other_balance,
+        updated_at: newDebt.updated_at,
+      },
+      { onConflict: 'farmer_id' }
+    )
+
+    const totalAfter = totalOutstandingDebt(newDebt)
+    const ledgerRows: Partial<FarmerDebtLedgerEntry>[] = []
+    if (fertilizerApplied > 0) {
+      ledgerRows.push({
+        farmer_id: booking.farmer_id,
+        transaction_type: 'deduction',
+        debit: 0,
+        credit: fertilizerApplied,
+        balance_after: totalAfter,
+        note: `หักหนี้ค่าปุ๋ยจากการขายเชอร์รี่ ${booking.booking_code}`,
+        created_by: userData.user?.id ?? null,
+      })
+    }
+    if (pesticideApplied > 0) {
+      ledgerRows.push({
+        farmer_id: booking.farmer_id,
+        transaction_type: 'deduction',
+        debit: 0,
+        credit: pesticideApplied,
+        balance_after: totalAfter,
+        note: `หักหนี้ค่ายา/สารเคมีจากการขายเชอร์รี่ ${booking.booking_code}`,
+        created_by: userData.user?.id ?? null,
+      })
+    }
+    if (cashAdvanceApplied > 0) {
+      ledgerRows.push({
+        farmer_id: booking.farmer_id,
+        transaction_type: 'deduction',
+        debit: 0,
+        credit: cashAdvanceApplied,
+        balance_after: totalAfter,
+        note: `หักเงินเบิกล่วงหน้าจากการขายเชอร์รี่ ${booking.booking_code}`,
+        created_by: userData.user?.id ?? null,
+      })
+    }
+    ledgerRows.push({
+      farmer_id: booking.farmer_id,
+      transaction_type: 'cherry_sale',
+      debit: 0,
+      credit: 0,
+      balance_after: totalAfter,
+      note: `ขายเชอร์รี่ ${booking.booking_code} มูลค่า ${grossAmount.toLocaleString()} บาท`,
+      created_by: userData.user?.id ?? null,
+    })
+    await supabase.from('farmer_debt_ledger').insert(ledgerRows)
+
+    setSaving(false)
+    onSaved(receivingRow as CherryReceiving, paymentRow as FarmerPayment, newDebt)
   }
 
   return (
@@ -282,11 +377,13 @@ function ReceivingForm({
         <NumberField label="% หัก" value={deductionPercent} onChange={setDeductionPercent} />
         <NumberField label="น้ำหนักที่รับซื้อ (กก.)" value={acceptedWeightOverride} onChange={setAcceptedWeightOverride} placeholder={suggestedAccepted.toFixed(2)} />
         <NumberField label="หักค่าปุ๋ย (บาท)" value={fertilizerDeduction} onChange={setFertilizerDeduction} />
+        <NumberField label="หักค่ายา/สารเคมี (บาท)" value={pesticideDeduction} onChange={setPesticideDeduction} />
+        <NumberField label="หักเงินเบิกล่วงหน้า (บาท)" value={cashAdvanceDeduction} onChange={setCashAdvanceDeduction} />
       </FieldGrid>
 
       <div style={{ fontSize: 13, color: '#2d4a3a', margin: '10px 0' }}>
-        ยอดเงิน: {grossAmount.toLocaleString()} บาท − หักค่าปุ๋ย {Number(fertilizerDeduction || 0).toLocaleString()} บาท ={' '}
-        <strong>{netPayable.toLocaleString()} บาท</strong>
+        ยอดเงิน: {grossAmount.toLocaleString()} บาท − หักค่าปุ๋ย {fertilizerApplied.toLocaleString()} − หักค่ายา {pesticideApplied.toLocaleString()} − หักเงินเบิก{' '}
+        {cashAdvanceApplied.toLocaleString()} บาท = <strong>{netPayable.toLocaleString()} บาท</strong>
       </div>
 
       {error && <p style={{ color: '#c0392b', fontSize: 13, marginBottom: 8 }}>{error}</p>}
@@ -337,11 +434,35 @@ function MarkPaidForm({
       .select()
       .single()
 
-    setSaving(false)
     if (updateError || !updated) {
+      setSaving(false)
       setError('ไม่สามารถบันทึกการจ่ายเงินได้')
       return
     }
+
+    const { data: userData } = await supabase.auth.getUser()
+    const { data: debtRow } = await supabase
+      .from('farmer_debts')
+      .select('fertilizer_balance, pesticide_balance, cash_advance_balance, other_balance')
+      .eq('farmer_id', payment.farmer_id)
+      .maybeSingle()
+    const totalDebt =
+      Number(debtRow?.fertilizer_balance ?? 0) +
+      Number(debtRow?.pesticide_balance ?? 0) +
+      Number(debtRow?.cash_advance_balance ?? 0) +
+      Number(debtRow?.other_balance ?? 0)
+
+    await supabase.from('farmer_debt_ledger').insert({
+      farmer_id: payment.farmer_id,
+      transaction_type: 'payment',
+      debit: 0,
+      credit: 0,
+      balance_after: totalDebt,
+      note: `จ่ายเงินสุทธิ ${Number(payment.net_payable).toLocaleString()} บาท ผ่าน ${paymentMethod}`,
+      created_by: userData.user?.id ?? null,
+    })
+
+    setSaving(false)
     onSaved(updated as FarmerPayment)
   }
 
@@ -380,15 +501,23 @@ function MarkPaidForm({
 function PaidSummary({ payment }: { payment: FarmerPayment }) {
   return (
     <div style={{ fontSize: 13, color: '#256029' }}>
-      จ่ายเงินแล้ว {Number(payment.net_payable).toLocaleString()} บาท
-      {payment.payment_slip_url && (
-        <>
-          {' · '}
-          <a href={payment.payment_slip_url} target="_blank" rel="noreferrer" style={{ color: '#2d7a3a' }}>
-            ดูสลิป
-          </a>
-        </>
-      )}
+      <div>
+        จ่ายเงินแล้ว {Number(payment.net_payable).toLocaleString()} บาท
+        {payment.payment_slip_url && (
+          <>
+            {' · '}
+            <a href={payment.payment_slip_url} target="_blank" rel="noreferrer" style={{ color: '#2d7a3a' }}>
+              ดูสลิป
+            </a>
+          </>
+        )}
+      </div>
+      <div style={{ fontSize: 12, color: '#6b8f5e', marginTop: 4 }}>
+        ยอดขาย {Number(payment.gross_amount).toLocaleString()} บาท
+        {Number(payment.fertilizer_deduction) > 0 && ` · หักค่าปุ๋ย ${Number(payment.fertilizer_deduction).toLocaleString()}`}
+        {Number(payment.pesticide_deduction) > 0 && ` · หักค่ายา ${Number(payment.pesticide_deduction).toLocaleString()}`}
+        {Number(payment.cash_advance_deduction) > 0 && ` · หักเงินเบิก ${Number(payment.cash_advance_deduction).toLocaleString()}`}
+      </div>
     </div>
   )
 }

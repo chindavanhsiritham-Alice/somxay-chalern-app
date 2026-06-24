@@ -9,6 +9,7 @@ const TABS = [
   { href: '/farmer/sell-cherry', label: 'ขายเชอร์รี่', icon: '🍒' },
   { href: '/farmer/bookings', label: 'รายการขาย', icon: '📋' },
   { href: '/farmer/payments', label: 'การจ่ายเงิน', icon: '💰' },
+  { href: '/farmer/credit', label: 'หนี้/เครดิต', icon: '💳' },
 ]
 
 export default function FarmerTabBar() {
