@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
+import { getSalesReps } from '@/lib/crm/data'
 import type { Customer } from '@/lib/crm/types'
 import type { Quotation, QuotationItem } from '@/lib/sales/types'
 import PrintButton from './PrintButton'
@@ -12,15 +13,17 @@ export default async function QuotationPrintPage({ params }: { params: Promise<{
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: quotation }, { data: items }] = await Promise.all([
+  const [{ data: quotation }, { data: items }, salesReps] = await Promise.all([
     supabase.from('quotations').select('*, customers(*)').eq('id', id).maybeSingle(),
     supabase.from('quotation_items').select('*').eq('quotation_id', id).order('sort_order'),
+    getSalesReps(supabase),
   ])
 
   if (!quotation) notFound()
 
   const q = quotation as unknown as Quotation & { customers: Customer }
   const rows = (items ?? []) as QuotationItem[]
+  const salesRepName = salesReps.find((s) => s.id === q.sales_rep_id)?.full_name ?? '-'
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: 32, fontFamily: 'sans-serif', color: '#222' }}>
@@ -38,11 +41,17 @@ export default async function QuotationPrintPage({ params }: { params: Promise<{
         </div>
       </div>
 
-      <div style={{ marginBottom: 24 }}>
-        <h3 style={{ color: '#2d4a3a', margin: '0 0 6px', fontSize: 14 }}>เรียน / To</h3>
-        <p style={{ margin: '2px 0' }}>{customerLabel(q.customers)}</p>
-        <p style={{ margin: '2px 0', color: '#555', fontSize: 13 }}>{q.customers.phone ?? ''}</p>
-        <p style={{ margin: '2px 0', color: '#555', fontSize: 13 }}>{q.customers.billing_address ?? ''}</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+        <div>
+          <h3 style={{ color: '#2d4a3a', margin: '0 0 6px', fontSize: 14 }}>เรียน / To</h3>
+          <p style={{ margin: '2px 0' }}>{customerLabel(q.customers)}</p>
+          <p style={{ margin: '2px 0', color: '#555', fontSize: 13 }}>{q.customers.phone ?? ''}</p>
+          <p style={{ margin: '2px 0', color: '#555', fontSize: 13 }}>{q.customers.billing_address ?? ''}</p>
+        </div>
+        <div>
+          <h3 style={{ color: '#2d4a3a', margin: '0 0 6px', fontSize: 14 }}>เซลส์ / Sales Rep</h3>
+          <p style={{ margin: '2px 0' }}>{salesRepName}</p>
+        </div>
       </div>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 24 }}>
@@ -52,6 +61,7 @@ export default async function QuotationPrintPage({ params }: { params: Promise<{
             <th style={{ padding: '8px 10px', borderBottom: '2px solid #2d7a3a', textAlign: 'right' }}>กก.</th>
             <th style={{ padding: '8px 10px', borderBottom: '2px solid #2d7a3a', textAlign: 'right' }}>ราคา/กก.</th>
             <th style={{ padding: '8px 10px', borderBottom: '2px solid #2d7a3a', textAlign: 'right' }}>ส่วนลด</th>
+            <th style={{ padding: '8px 10px', borderBottom: '2px solid #2d7a3a', textAlign: 'right' }}>ภาษี</th>
             <th style={{ padding: '8px 10px', borderBottom: '2px solid #2d7a3a', textAlign: 'right' }}>รวม</th>
           </tr>
         </thead>
@@ -64,6 +74,7 @@ export default async function QuotationPrintPage({ params }: { params: Promise<{
               <td style={{ padding: '8px 10px', textAlign: 'right' }}>
                 {it.discount_percent ? `${it.discount_percent}%` : ''} {it.discount_amount ? it.discount_amount.toLocaleString() : ''}
               </td>
+              <td style={{ padding: '8px 10px', textAlign: 'right' }}>{it.tax_percent ? `${it.tax_percent}%` : '-'}</td>
               <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600 }}>{it.total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
             </tr>
           ))}
@@ -80,6 +91,18 @@ export default async function QuotationPrintPage({ params }: { params: Promise<{
             <tr>
               <td style={{ padding: '4px 16px', color: '#777' }}>ส่วนลดรวม</td>
               <td style={{ padding: '4px 0', textAlign: 'right' }}>{q.discount_total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: '4px 16px', color: '#777' }}>ภาษีรวม</td>
+              <td style={{ padding: '4px 0', textAlign: 'right' }}>{q.tax_total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: '4px 16px', color: '#777' }}>ค่าขนส่ง</td>
+              <td style={{ padding: '4px 0', textAlign: 'right' }}>{q.freight.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: '4px 16px', color: '#777' }}>ค่าประกัน</td>
+              <td style={{ padding: '4px 0', textAlign: 'right' }}>{q.insurance.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
             </tr>
             <tr>
               <td style={{ padding: '8px 16px', fontWeight: 700, color: '#2d4a3a', borderTop: '2px solid #2d7a3a' }}>รวมทั้งสิ้น</td>

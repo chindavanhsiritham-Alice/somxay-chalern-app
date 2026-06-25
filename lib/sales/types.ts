@@ -37,6 +37,9 @@ export type Quotation = {
   subtotal: number
   discount_total: number
   total: number
+  freight: number
+  insurance: number
+  tax_total: number
   notes: string | null
   terms: string | null
   rejected_reason: string | null
@@ -59,6 +62,8 @@ export type QuotationItem = {
   tier_price: number | null
   discount_percent: number
   discount_amount: number
+  tax_percent: number
+  tax_amount: number
   requires_approval: boolean
   total: number
   sort_order: number
@@ -130,10 +135,19 @@ export function generateQuotationNumber(sequenceValue: number) {
   return `QT-${String(sequenceValue).padStart(6, '0')}`
 }
 
-export function calcLineTotal(kg: number, unitPrice: number, discountPercent: number, discountAmount: number) {
+export function calcLineNet(kg: number, unitPrice: number, discountPercent: number, discountAmount: number) {
   const gross = kg * unitPrice
   const afterPercent = gross - gross * (discountPercent / 100)
   return Math.max(0, afterPercent - discountAmount)
+}
+
+export function calcLineTax(lineNet: number, taxPercent: number) {
+  return lineNet * (taxPercent / 100)
+}
+
+export function calcLineTotal(kg: number, unitPrice: number, discountPercent: number, discountAmount: number, taxPercent: number) {
+  const net = calcLineNet(kg, unitPrice, discountPercent, discountAmount)
+  return net + calcLineTax(net, taxPercent)
 }
 
 export function lineRequiresApproval(unitPrice: number, discountPercent: number, tierPrice: number | null) {

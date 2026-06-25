@@ -13,7 +13,8 @@ export default async function NewQuotationPage() {
 
   let customerQuery = supabase
     .from('customers')
-    .select('id, customer_code, company_name, shop_name, owner_name, phone, tier, assigned_sales_rep, status')
+    .select('id, customer_code, company_name, shop_name, owner_name, phone, whatsapp, email, tier, assigned_sales_rep, status')
+    .eq('status', 'active')
     .order('company_name')
 
   if (profile?.role === 'sales') {
@@ -29,7 +30,12 @@ export default async function NewQuotationPage() {
 
   return (
     <NewQuotationForm
-      customers={(customers ?? []) as unknown as Pick<Customer, 'id' | 'customer_code' | 'company_name' | 'shop_name' | 'owner_name' | 'phone' | 'tier' | 'assigned_sales_rep' | 'status'>[]}
+      customers={
+        (customers ?? []) as unknown as Pick<
+          Customer,
+          'id' | 'customer_code' | 'company_name' | 'shop_name' | 'owner_name' | 'phone' | 'whatsapp' | 'email' | 'tier' | 'assigned_sales_rep' | 'status'
+        >[]
+      }
       salesReps={salesReps}
       products={(products ?? []) as Product[]}
       tierPrices={tierPrices}

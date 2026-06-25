@@ -7,6 +7,8 @@ import { createClient } from '@/lib/supabase/client'
 import {
   APPROVAL_STATUS_LABELS,
   QUOTATION_STATUS_LABELS,
+  calcLineNet,
+  calcLineTax,
   calcLineTotal,
   lineRequiresApproval,
   type ApprovalStatus,
@@ -26,6 +28,8 @@ const secondaryButton: React.CSSProperties = { background: '#eef2ea', color: '#2
 const dangerButton: React.CSSProperties = { background: '#f5d6d6', color: '#9a2a2a', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }
 const card: React.CSSProperties = { background: '#fff', borderRadius: 12, padding: 16, marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }
 const badge: React.CSSProperties = { display: 'inline-block', padding: '3px 11px', borderRadius: 999, fontSize: 12, fontWeight: 600 }
+const itemCard: React.CSSProperties = { border: '1px solid #e3e8df', borderRadius: 10, padding: 12, marginBottom: 10, background: '#fafbf8' }
+const addItemButton: React.CSSProperties = { background: '#2d7a3a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', width: '100%', padding: '12px 18px', fontSize: 14, fontWeight: 700 }
 
 const STATUS_COLORS: Record<QuotationStatus, { bg: string; fg: string }> = {
   draft: { bg: '#eee', fg: '#777' },
@@ -72,6 +76,7 @@ type DraftItem = {
   unit_price: number
   discount_percent: number
   discount_amount: number
+  tax_percent: number
 }
 
 export default function QuotationDetailManager({
@@ -104,10 +109,13 @@ export default function QuotationDetailManager({
       unit_price: it.unit_price,
       discount_percent: it.discount_percent,
       discount_amount: it.discount_amount,
+      tax_percent: it.tax_percent,
     }))
   )
   const [editingItems, setEditingItems] = useState(false)
   const [nextStatus, setNextStatus] = useState<QuotationStatus>(quotation.status)
+  const [freight, setFreight] = useState(quotation.freight)
+  const [insurance, setInsurance] = useState(quotation.insurance)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [activityType, setActivityType] = useState('note')
@@ -118,13 +126,17 @@ export default function QuotationDetailManager({
 
   const rows = draftItems.map((it) => {
     const tierPrice = q.customers ? tierPriceFor(tierPrices, it.product_id ?? '', q.customers.tier, q.currency) : null
-    const total = calcLineTotal(it.kg, it.unit_price, it.discount_percent, it.discount_amount)
+    const lineNet = calcLineNet(it.kg, it.unit_price, it.discount_percent, it.discount_amount)
+    const taxAmount = calcLineTax(lineNet, it.tax_percent)
+    const total = calcLineTotal(it.kg, it.unit_price, it.discount_percent, it.discount_amount, it.tax_percent)
     const requiresApproval = lineRequiresApproval(it.unit_price, it.discount_percent, tierPrice)
-    return { ...it, tierPrice, total, requiresApproval }
+    return { ...it, tierPrice, lineNet, taxAmount, total, requiresApproval }
   })
   const subtotal = rows.reduce((sum, r) => sum + r.kg * r.unit_price, 0)
-  const total = rows.reduce((sum, r) => sum + r.total, 0)
-  const discountTotal = Math.max(0, subtotal - total)
+  const lineNetTotal = rows.reduce((sum, r) => sum + r.lineNet, 0)
+  const discountTotal = Math.max(0, subtotal - lineNetTotal)
+  const taxTotal = rows.reduce((sum, r) => sum + r.taxAmount, 0)
+  const grandTotal = lineNetTotal + taxTotal + freight + insurance
   const anyRequiresApproval = rows.some((r) => r.requiresApproval)
 
   const updateItem = (key: string, patch: Partial<DraftItem>) => {
@@ -142,7 +154,7 @@ export default function QuotationDetailManager({
     if (!first) return
     setDraftItems((prev) => [
       ...prev,
-      { key: nextKey(), product_id: first.id, product_name: first.name, kg: 0, unit_price: 0, discount_percent: 0, discount_amount: 0 },
+      { key: nextKey(), product_id: first.id, product_name: first.name, kg: 0, unit_price: 0, discount_percent: 0, discount_amount: 0, tax_percent: 0 },
     ])
   }
 
@@ -168,6 +180,8 @@ export default function QuotationDetailManager({
       tier_price: r.tierPrice,
       discount_percent: r.discount_percent,
       discount_amount: r.discount_amount,
+      tax_percent: r.tax_percent,
+      tax_amount: r.taxAmount,
       requires_approval: r.requiresApproval,
       total: r.total,
       sort_order: idx,
@@ -180,14 +194,23 @@ export default function QuotationDetailManager({
     }
     const { error: updErr } = await supabase
       .from('quotations')
-      .update({ subtotal, discount_total: discountTotal, total, approval_status: approvalStatus, updated_at: new Date().toISOString() })
+      .update({
+        subtotal,
+        discount_total: discountTotal,
+        tax_total: taxTotal,
+        freight,
+        insurance,
+        total: grandTotal,
+        approval_status: approvalStatus,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', q.id)
     setBusy(false)
     if (updErr) {
       setError(updErr.message)
       return
     }
-    setQ((prev) => ({ ...prev, subtotal, discount_total: discountTotal, total, approval_status: approvalStatus }))
+    setQ((prev) => ({ ...prev, subtotal, discount_total: discountTotal, tax_total: taxTotal, freight, insurance, total: grandTotal, approval_status: approvalStatus }))
     setEditingItems(false)
   }
 
@@ -409,98 +432,93 @@ export default function QuotationDetailManager({
 
         {editingItems ? (
           <>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 760 }}>
-                <thead>
-                  <tr style={{ background: '#f5f7f2', textAlign: 'left' }}>
-                    <th style={{ padding: 8 }}>สินค้า</th>
-                    <th style={{ padding: 8 }}>กก.</th>
-                    <th style={{ padding: 8 }}>ราคา/กก.</th>
-                    <th style={{ padding: 8 }}>ส่วนลด %</th>
-                    <th style={{ padding: 8 }}>ส่วนลด</th>
-                    <th style={{ padding: 8 }}>รวม</th>
-                    <th style={{ padding: 8 }} />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.key} style={{ borderTop: '1px solid #eee' }}>
-                      <td style={{ padding: 8 }}>
-                        <select value={String(r.product_id ?? '')} onChange={(e) => onProductChange(r.key, e.target.value)} style={fieldInput}>
-                          {products.map((p) => (
-                            <option key={String(p.id)} value={String(p.id)}>
-                              {p.name} {p.grade ? `(${p.grade})` : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td style={{ padding: 8 }}>
-                        <input type="number" value={r.kg} onChange={(e) => updateItem(r.key, { kg: Number(e.target.value) })} style={{ ...fieldInput, width: 90 }} />
-                      </td>
-                      <td style={{ padding: 8 }}>
-                        <input
-                          type="number"
-                          value={r.unit_price}
-                          onChange={(e) => updateItem(r.key, { unit_price: Number(e.target.value) })}
-                          style={{ ...fieldInput, width: 100, borderColor: r.requiresApproval ? '#e0a23c' : '#ccc' }}
-                        />
-                      </td>
-                      <td style={{ padding: 8 }}>
-                        <input type="number" value={r.discount_percent} onChange={(e) => updateItem(r.key, { discount_percent: Number(e.target.value) })} style={{ ...fieldInput, width: 80 }} />
-                      </td>
-                      <td style={{ padding: 8 }}>
-                        <input type="number" value={r.discount_amount} onChange={(e) => updateItem(r.key, { discount_amount: Number(e.target.value) })} style={{ ...fieldInput, width: 90 }} />
-                      </td>
-                      <td style={{ padding: 8, fontWeight: 600 }}>{r.total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
-                      <td style={{ padding: 8 }}>
-                        <button style={secondaryButton} onClick={() => removeItem(r.key)}>
-                          ลบ
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {rows.map((r) => (
+              <div key={r.key} style={itemCard}>
+                <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))' }}>
+                  <label style={{ gridColumn: 'span 2' }}>
+                    <span style={fieldLabel}>สินค้า</span>
+                    <select value={String(r.product_id ?? '')} onChange={(e) => onProductChange(r.key, e.target.value)} style={fieldInput}>
+                      {products.map((p) => (
+                        <option key={String(p.id)} value={String(p.id)}>
+                          {p.name} {p.grade ? `(${p.grade})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span style={fieldLabel}>จำนวน (กก.)</span>
+                    <input type="number" value={r.kg} onChange={(e) => updateItem(r.key, { kg: Number(e.target.value) })} style={fieldInput} />
+                  </label>
+                  <label>
+                    <span style={fieldLabel}>ราคา/กก.</span>
+                    <input
+                      type="number"
+                      value={r.unit_price}
+                      onChange={(e) => updateItem(r.key, { unit_price: Number(e.target.value) })}
+                      style={{ ...fieldInput, borderColor: r.requiresApproval ? '#e0a23c' : '#ccc' }}
+                    />
+                    {r.tierPrice != null && <span style={{ fontSize: 11, color: '#999' }}>ราคาตามระดับ: {r.tierPrice.toLocaleString()}</span>}
+                  </label>
+                  <label>
+                    <span style={fieldLabel}>ส่วนลด %</span>
+                    <input type="number" value={r.discount_percent} onChange={(e) => updateItem(r.key, { discount_percent: Number(e.target.value) })} style={fieldInput} />
+                  </label>
+                  <label>
+                    <span style={fieldLabel}>ส่วนลด (จำนวนเงิน)</span>
+                    <input type="number" value={r.discount_amount} onChange={(e) => updateItem(r.key, { discount_amount: Number(e.target.value) })} style={fieldInput} />
+                  </label>
+                  <label>
+                    <span style={fieldLabel}>ภาษี %</span>
+                    <input type="number" value={r.tax_percent} onChange={(e) => updateItem(r.key, { tax_percent: Number(e.target.value) })} style={fieldInput} />
+                  </label>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>
+                    รวม: {r.total.toLocaleString(undefined, { maximumFractionDigits: 2 })} {q.currency}
+                  </div>
+                  <button style={secondaryButton} onClick={() => removeItem(r.key)}>
+                    🗑️ ลบรายการ
+                  </button>
+                </div>
+                {r.requiresApproval && <p style={{ color: '#915c1c', fontSize: 12, marginTop: 6, marginBottom: 0 }}>⚠️ รายการนี้ต้องรอการอนุมัติ</p>}
+              </div>
+            ))}
+            <button style={{ ...addItemButton, marginBottom: 16 }} onClick={addItem} disabled={products.length === 0}>
+              ➕ เพิ่มรายการสินค้า
+            </button>
+
+            <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginBottom: 12 }}>
+              <label>
+                <span style={fieldLabel}>ค่าขนส่ง (Freight)</span>
+                <input type="number" value={freight} onChange={(e) => setFreight(Number(e.target.value))} style={fieldInput} />
+              </label>
+              <label>
+                <span style={fieldLabel}>ค่าประกัน (Insurance)</span>
+                <input type="number" value={insurance} onChange={(e) => setInsurance(Number(e.target.value))} style={fieldInput} />
+              </label>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12 }}>
-              <button style={secondaryButton} onClick={addItem}>
-                + เพิ่มรายการ
-              </button>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button style={primaryButton} onClick={saveItems} disabled={busy}>
                 บันทึกรายการ
               </button>
             </div>
           </>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 600 }}>
-              <thead>
-                <tr style={{ background: '#f5f7f2', textAlign: 'left' }}>
-                  <th style={{ padding: 8 }}>สินค้า</th>
-                  <th style={{ padding: 8 }}>กก.</th>
-                  <th style={{ padding: 8 }}>ราคา/กก.</th>
-                  <th style={{ padding: 8 }}>ส่วนลด %</th>
-                  <th style={{ padding: 8 }}>ส่วนลด</th>
-                  <th style={{ padding: 8 }}>รวม</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.key} style={{ borderTop: '1px solid #eee' }}>
-                    <td style={{ padding: 8 }}>{r.product_name}</td>
-                    <td style={{ padding: 8 }}>{r.kg.toLocaleString()}</td>
-                    <td style={{ padding: 8 }}>{r.unit_price.toLocaleString()}</td>
-                    <td style={{ padding: 8 }}>{r.discount_percent}%</td>
-                    <td style={{ padding: 8 }}>{r.discount_amount.toLocaleString()}</td>
-                    <td style={{ padding: 8, fontWeight: 600 }}>{r.total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          rows.map((r) => (
+            <div key={r.key} style={itemCard}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                <strong style={{ color: '#2d4a3a' }}>{r.product_name}</strong>
+                <span style={{ fontWeight: 600, color: '#2d7a3a' }}>{r.total.toLocaleString(undefined, { maximumFractionDigits: 2 })} {q.currency}</span>
+              </div>
+              <div style={{ fontSize: 12, color: '#777', marginTop: 4 }}>
+                {r.kg.toLocaleString()} กก. × {r.unit_price.toLocaleString()} · ส่วนลด {r.discount_percent}% ({r.discount_amount.toLocaleString()}) · ภาษี {r.tax_percent}%
+              </div>
+            </div>
+          ))
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 24, marginTop: 16, fontSize: 13 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, marginTop: 16, fontSize: 13 }}>
           <div>
             ยอดก่อนหักส่วนลด: <strong>{subtotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong>
           </div>
@@ -508,7 +526,16 @@ export default function QuotationDetailManager({
             ส่วนลดรวม: <strong>{discountTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong>
           </div>
           <div>
-            รวมทั้งสิ้น: <strong style={{ color: '#2d7a3a' }}>{total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong> {q.currency}
+            ภาษีรวม: <strong>{taxTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong>
+          </div>
+          <div>
+            ค่าขนส่ง: <strong>{freight.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong>
+          </div>
+          <div>
+            ค่าประกัน: <strong>{insurance.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong>
+          </div>
+          <div style={{ paddingTop: 6, borderTop: '1px solid #eee', fontSize: 15 }}>
+            รวมทั้งสิ้น: <strong style={{ color: '#2d7a3a' }}>{(editingItems ? grandTotal : q.total).toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong> {q.currency}
           </div>
         </div>
       </div>
