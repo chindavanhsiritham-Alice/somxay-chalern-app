@@ -27,3 +27,7 @@ export function todayDateString() {
   const offset = now.getTimezoneOffset()
   return new Date(now.getTime() - offset * 60000).toISOString().slice(0, 10)
 }
+
+export function daysAgoIso(days: number) {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+}
