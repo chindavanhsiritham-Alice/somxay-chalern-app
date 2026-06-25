@@ -12,6 +12,8 @@ const SECTIONS: Record<string, MenuSection[]> = {
       title: 'งานขาย',
       items: [
         { label: 'Customer Management', href: '/admin/customers', icon: '👥' },
+        { label: 'Sales Pipeline', href: '/admin/sales-pipeline', icon: '🧭' },
+        { label: 'Customer Dashboard', href: '/admin/customer-dashboard', icon: '📈' },
         { label: 'Quotations', href: '/admin/quotations', icon: '📝' },
         { label: 'Orders', href: '/admin/orders', icon: '🛒' },
         { label: 'Shop Orders', href: '/admin/shop-orders', icon: '☕' },
@@ -70,6 +72,8 @@ const SECTIONS: Record<string, MenuSection[]> = {
       title: 'งานขาย',
       items: [
         { label: 'Customer Management', href: '/admin/customers', icon: '👥' },
+        { label: 'Sales Pipeline', href: '/admin/sales-pipeline', icon: '🧭' },
+        { label: 'Customer Dashboard', href: '/admin/customer-dashboard', icon: '📈' },
         { label: 'Quotations', href: '/admin/quotations', icon: '📝' },
         { label: 'Orders', href: '/admin/orders', icon: '🛒' },
         { label: 'Shop Orders', href: '/admin/shop-orders', icon: '☕' },
@@ -126,6 +130,8 @@ const SECTIONS: Record<string, MenuSection[]> = {
       title: 'งานขาย',
       items: [
         { label: 'Customers', href: '/admin/customers', icon: '👥' },
+        { label: 'Sales Pipeline', href: '/admin/sales-pipeline', icon: '🧭' },
+        { label: 'Customer Dashboard', href: '/admin/customer-dashboard', icon: '📈' },
         { label: 'Quotations', href: '/admin/quotations', icon: '📝' },
         { label: 'Orders', href: '/admin/orders', icon: '🛒' },
         { label: 'Shop Orders', href: '/admin/shop-orders', icon: '☕' },

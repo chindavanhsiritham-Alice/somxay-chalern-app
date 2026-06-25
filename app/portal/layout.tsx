@@ -4,6 +4,7 @@ import Link from 'next/link'
 
 const MENU = [
   { label: 'Product Catalog', href: '/portal' },
+  { label: 'My Profile', href: '/portal/profile' },
   { label: 'My Orders', href: '/portal/orders' },
   { label: 'My Shipments', href: '/portal/shipments' },
   { label: 'My Documents', href: '/portal/documents' },
