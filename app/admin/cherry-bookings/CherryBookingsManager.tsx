@@ -13,6 +13,7 @@ import {
   type FarmerDebtLedgerEntry,
   type FarmerPayment,
 } from '@/lib/farmer/types'
+import type { Warehouse } from '@/lib/warehouse/types'
 
 export type AdminBookingRow = CherryBooking & {
   farmers: { full_name: string; phone: string | null; village: string | null; farmer_debts: FarmerDebtBalance[] | FarmerDebtBalance | null } | null
@@ -70,7 +71,13 @@ const BOOKING_STATUS_COLORS: Record<BookingStatus, { bg: string; fg: string }> =
   cancelled: { bg: '#f5d6d6', fg: '#9a2a2a' },
 }
 
-export default function CherryBookingsManager({ initialBookings }: { initialBookings: AdminBookingRow[] }) {
+export default function CherryBookingsManager({
+  initialBookings,
+  warehouses,
+}: {
+  initialBookings: AdminBookingRow[]
+  warehouses: Warehouse[]
+}) {
   const supabase = createClient()
   const [rows, setRows] = useState<Row[]>(initialBookings.map(toRow))
   const [search, setSearch] = useState('')
@@ -112,6 +119,7 @@ export default function CherryBookingsManager({ initialBookings }: { initialBook
               onToggle={() => setExpandedId((id) => (id === row.booking.id ? null : row.booking.id))}
               onUpdate={(patch) => updateRow(row.booking.id, patch)}
               supabase={supabase}
+              warehouses={warehouses}
             />
           ))}
         </div>
@@ -126,12 +134,14 @@ function BookingCard({
   onToggle,
   onUpdate,
   supabase,
+  warehouses,
 }: {
   row: Row
   expanded: boolean
   onToggle: () => void
   onUpdate: (patch: Partial<Row>) => void
   supabase: SupabaseClient
+  warehouses: Warehouse[]
 }) {
   const { booking, farmerName, farmerPhone, receiving, payment, debt } = row
 
@@ -177,6 +187,7 @@ function BookingCard({
               booking={booking}
               debt={debt}
               supabase={supabase}
+              warehouses={warehouses}
               onSaved={(savedReceiving, savedPayment, newDebt) =>
                 onUpdate({ receiving: savedReceiving, payment: savedPayment, debt: newDebt, booking: { ...booking, status: 'received' } })
               }
@@ -203,13 +214,16 @@ function ReceivingForm({
   booking,
   debt,
   supabase,
+  warehouses,
   onSaved,
 }: {
   booking: CherryBooking
   debt: FarmerDebtBalance
   supabase: SupabaseClient
+  warehouses: Warehouse[]
   onSaved: (receiving: CherryReceiving, payment: FarmerPayment, newDebt: FarmerDebtBalance) => void
 }) {
+  const [warehouseId, setWarehouseId] = useState(warehouses[0]?.id ?? '')
   const [truckPlate, setTruckPlate] = useState('')
   const [grossWeight, setGrossWeight] = useState('')
   const [tareWeight, setTareWeight] = useState('')
@@ -264,6 +278,7 @@ function ReceivingForm({
         deduction_percent: deductionPercent === '' ? null : Number(deductionPercent),
         accepted_weight: acceptedWeight,
         recorded_by: userData.user?.id ?? null,
+        warehouse_id: warehouseId || null,
       })
       .select()
       .single()
@@ -273,6 +288,17 @@ function ReceivingForm({
       setSaving(false)
       return
     }
+
+    await supabase.from('inventory_stock_movements').insert({
+      material_type: 'cherry',
+      movement_type: 'receive',
+      reference_label: booking.booking_code,
+      reference_id: receivingRow.id,
+      warehouse_id: warehouseId || null,
+      quantity_kg: acceptedWeight,
+      note: `รับเข้าเชอร์รี่จากเกษตรกร ${booking.booking_code}`,
+      created_by: userData.user?.id ?? null,
+    })
 
     await supabase.from('cherry_bookings').update({ status: 'received' }).eq('id', booking.id)
 
@@ -375,6 +401,17 @@ function ReceivingForm({
     <form onSubmit={handleSubmit}>
       <h3 style={{ fontSize: 13, color: '#2d4a3a', marginBottom: 10 }}>ยืนยันรับเข้า &amp; คำนวณเงิน</h3>
       <FieldGrid>
+        <label>
+          <span style={fieldLabel}>คลังที่รับเข้า</span>
+          <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} style={fieldInput}>
+            <option value="">— ไม่ระบุ —</option>
+            {warehouses.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.name}
+              </option>
+            ))}
+          </select>
+        </label>
         <TextField label="ทะเบียนรถ" value={truckPlate} onChange={setTruckPlate} />
         <NumberField label="น้ำหนักรวม (กก.)" value={grossWeight} onChange={setGrossWeight} />
         <NumberField label="น้ำหนักรถเปล่า (กก.)" value={tareWeight} onChange={setTareWeight} />

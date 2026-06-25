@@ -12,6 +12,8 @@ const SECTIONS: Record<string, MenuSection[]> = {
       title: 'งานขาย',
       items: [
         { label: 'Customer Management', href: '/admin/customers', icon: '👥' },
+        { label: 'Sales Pipeline', href: '/admin/sales-pipeline', icon: '🧭' },
+        { label: 'Customer Dashboard', href: '/admin/customer-dashboard', icon: '📈' },
         { label: 'Quotations', href: '/admin/quotations', icon: '📝' },
         { label: 'Orders', href: '/admin/orders', icon: '🛒' },
         { label: 'Shop Orders', href: '/admin/shop-orders', icon: '☕' },
@@ -38,6 +40,18 @@ const SECTIONS: Record<string, MenuSection[]> = {
       items: [
         { label: 'Delivery Queue', href: '/admin/delivery-queue', icon: '🚦' },
         { label: 'Delivery Reports', href: '/admin/delivery-reports', icon: '⏱️' },
+      ],
+    },
+    {
+      title: 'คลังสินค้า',
+      items: [
+        { label: 'Warehouse Dashboard', href: '/admin/warehouse', icon: '🏭' },
+        { label: 'Cherry Inventory', href: '/admin/inventory-cherry', icon: '🍒' },
+        { label: 'Parchment Inventory', href: '/admin/inventory-parchment', icon: '🌰' },
+        { label: 'Green Bean Inventory', href: '/admin/inventory-green-bean', icon: '🟢' },
+        { label: 'Roasted Bean Inventory', href: '/admin/inventory-roasted-bean', icon: '🔥' },
+        { label: 'Stock Movements', href: '/admin/stock-movements', icon: '🔁' },
+        { label: 'Inventory Reports', href: '/admin/inventory-reports', icon: '📊' },
       ],
     },
     {
@@ -58,6 +72,8 @@ const SECTIONS: Record<string, MenuSection[]> = {
       title: 'งานขาย',
       items: [
         { label: 'Customer Management', href: '/admin/customers', icon: '👥' },
+        { label: 'Sales Pipeline', href: '/admin/sales-pipeline', icon: '🧭' },
+        { label: 'Customer Dashboard', href: '/admin/customer-dashboard', icon: '📈' },
         { label: 'Quotations', href: '/admin/quotations', icon: '📝' },
         { label: 'Orders', href: '/admin/orders', icon: '🛒' },
         { label: 'Shop Orders', href: '/admin/shop-orders', icon: '☕' },
@@ -87,6 +103,18 @@ const SECTIONS: Record<string, MenuSection[]> = {
       ],
     },
     {
+      title: 'คลังสินค้า',
+      items: [
+        { label: 'Warehouse Dashboard', href: '/admin/warehouse', icon: '🏭' },
+        { label: 'Cherry Inventory', href: '/admin/inventory-cherry', icon: '🍒' },
+        { label: 'Parchment Inventory', href: '/admin/inventory-parchment', icon: '🌰' },
+        { label: 'Green Bean Inventory', href: '/admin/inventory-green-bean', icon: '🟢' },
+        { label: 'Roasted Bean Inventory', href: '/admin/inventory-roasted-bean', icon: '🔥' },
+        { label: 'Stock Movements', href: '/admin/stock-movements', icon: '🔁' },
+        { label: 'Inventory Reports', href: '/admin/inventory-reports', icon: '📊' },
+      ],
+    },
+    {
       title: 'ปฏิบัติการ',
       items: [
         { label: 'Contracts', href: '/admin/contracts', icon: '📄' },
@@ -102,6 +130,8 @@ const SECTIONS: Record<string, MenuSection[]> = {
       title: 'งานขาย',
       items: [
         { label: 'Customers', href: '/admin/customers', icon: '👥' },
+        { label: 'Sales Pipeline', href: '/admin/sales-pipeline', icon: '🧭' },
+        { label: 'Customer Dashboard', href: '/admin/customer-dashboard', icon: '📈' },
         { label: 'Quotations', href: '/admin/quotations', icon: '📝' },
         { label: 'Orders', href: '/admin/orders', icon: '🛒' },
         { label: 'Shop Orders', href: '/admin/shop-orders', icon: '☕' },
