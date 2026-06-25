@@ -96,6 +96,7 @@ export type CherryReceiving = {
   deduction_percent: number | null
   accepted_weight: number | null
   received_at: string | null
+  warehouse_id: string | null
 }
 
 export type FarmerPayment = {
